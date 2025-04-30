@@ -1,0 +1,51 @@
+{
+    "users": [
+      {
+        "id": 1,
+        "name": "Maria Santos",
+        "email": "maria@empresa.com",
+        "role": "admin",
+        "department": "RH"
+      },
+      {
+        "id": 2,
+        "name": "João Silva",
+        "email": "joao@empresa.com",
+        "role": "employee",
+        "department": "Desenvolvimento"
+      },
+      {
+        "id": 3,
+        "name": "Ana Oliveira",
+        "email": "ana@empresa.com",
+        "role": "employee",
+        "department": "Marketing"
+      }
+    ],
+    "feedback": [
+      {
+        "id": 1,
+        "userId": 2,
+        "date": "2025-04-22",
+        "productivity": 4,
+        "wellbeing": 5,
+        "comment": "Semana produtiva, mas estou preocupado com os prazos do próximo projeto."
+      },
+      {
+        "id": 2,
+        "userId": 3,
+        "date": "2025-04-22",
+        "productivity": 3,
+        "wellbeing": 4,
+        "comment": "Precisamos de mais colaboração entre as equipes de marketing e vendas."
+      },
+      {
+        "id": 3,
+        "userId": 2,
+        "date": "2025-04-15",
+        "productivity": 5,
+        "wellbeing": 4,
+        "comment": "Ótima semana, consegui completar todas as tarefas planejadas."
+      }
+    ]
+  }
