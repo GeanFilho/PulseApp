@@ -656,24 +656,7 @@ const PulseApp = ({ userFeedback = [], adminData = {} }) => {
                     </p>
                   </div>
                 </div>
-                
-                {/* Comentários positivos */}
-                {(feedback.positiveEvent || feedback.comment) && (
-                  <div style={{
-                    backgroundColor: '#f0fdf4',
-                    padding: '12px',
-                    borderRadius: '8px',
-                    marginBottom: '12px',
-                    borderLeft: '4px solid #10b981'
-                  }}>
-                    <p style={{ margin: '0 0 4px 0', fontWeight: '500', color: '#065f46' }}>
-                      Pontos positivos:
-                    </p>
-                    <p style={{ margin: 0, color: '#065f46' }}>
-                      {feedback.positiveEvent || feedback.comment}
-                    </p>
-                  </div>
-                )}
+    
                 
                 {/* Sugestões de melhoria */}
                 {feedback.improvementSuggestion && (
@@ -848,6 +831,7 @@ const PulseApp = ({ userFeedback = [], adminData = {} }) => {
             </div>
           </div>
           
+
           <div style={styles.formGroup}>
             <label style={styles.ratingLabel}>
               6. Existe algo que poderíamos melhorar para a próxima semana?

@@ -1,5 +1,6 @@
+// src/pages/auth/Login.js
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 
 // Estilos inline para o componente de login
@@ -109,29 +110,66 @@ const styles = {
     color: '#4f46e5',
     textDecoration: 'none'
   },
+  demoSection: {
+    marginTop: '24px',
+    textAlign: 'center',
+    borderTop: '1px solid #e5e7eb',
+    paddingTop: '16px'
+  },
+  demoText: {
+    fontSize: '12px',
+    color: '#6b7280',
+    marginBottom: '8px'
+  },
+  demoButtons: {
+    display: 'flex',
+    gap: '8px',
+    justifyContent: 'center'
+  },
   demoButton: {
     fontSize: '12px',
     padding: '8px',
-    marginTop: '16px',
     backgroundColor: '#f3f4f6',
     border: '1px solid #d1d5db',
     borderRadius: '8px',
     cursor: 'pointer',
     color: '#374151'
+  },
+  registerSection: {
+    marginTop: '24px',
+    textAlign: 'center',
+    borderTop: '1px solid #e5e7eb',
+    paddingTop: '16px'
+  },
+  registerText: {
+    fontSize: '14px',
+    color: '#6b7280',
+    marginBottom: '12px'
+  },
+  registerLink: {
+    display: 'inline-block',
+    padding: '10px 20px',
+    borderRadius: '8px',
+    backgroundColor: '#f3f4f6',
+    border: '1px solid #d1d5db',
+    color: '#374151',
+    textDecoration: 'none',
+    fontSize: '14px',
+    transition: 'all 0.2s ease'
   }
 };
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   
   const navigate = useNavigate();
   
   // Use o hook useAuth para acessar o contexto
-  const auth = useAuth();
-  console.log("Auth context:", auth); // Para debugging
+  const { login } = useAuth();
   
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -145,11 +183,10 @@ const Login = () => {
       setError('');
       setLoading(true);
       
-      console.log("Tentando fazer login com:", email, password);
-      const user = await auth.login(email, password);
-      console.log("Login bem-sucedido:", user);
+      // Usar o método de login do Firebase através do contexto
+      const user = await login(email, password);
       
-      // Redirecionar com base no papel do usuário
+      // Se o login for bem-sucedido, redirecionar com base no papel do usuário
       if (user.role === 'admin') {
         navigate('/admin');
       } else {
@@ -157,7 +194,15 @@ const Login = () => {
       }
     } catch (error) {
       console.error('Erro de login:', error);
-      setError('Falha no login. Verifique suas credenciais.');
+      
+      // Mensagens de erro mais específicas baseadas no código de erro do Firebase
+      if (error.message.includes('user-not-found') || error.message.includes('wrong-password')) {
+        setError('Email ou senha incorretos. Por favor, tente novamente.');
+      } else if (error.message.includes('too-many-requests')) {
+        setError('Muitas tentativas de login. Por favor, tente novamente mais tarde.');
+      } else {
+        setError('Falha no login. Por favor, verifique suas credenciais.');
+      }
     } finally {
       setLoading(false);
     }
@@ -221,6 +266,8 @@ const Login = () => {
                 type="checkbox"
                 id="remember"
                 style={styles.checkbox}
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
               />
               <label style={styles.checkboxLabel} htmlFor="remember">Lembrar-me</label>
             </div>
@@ -240,9 +287,9 @@ const Login = () => {
           </button>
         </form>
         
-        <div style={{ marginTop: '24px', textAlign: 'center', borderTop: '1px solid #e5e7eb', paddingTop: '16px' }}>
-          <p style={{ fontSize: '12px', color: '#6b7280', marginBottom: '8px' }}>Demo (para fins de teste):</p>
-          <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+        <div style={styles.demoSection}>
+          <p style={styles.demoText}>Demo (para fins de teste):</p>
+          <div style={styles.demoButtons}>
             <button
               style={styles.demoButton}
               onClick={() => handleDemoLogin('admin')}
@@ -258,6 +305,24 @@ const Login = () => {
               Login como Funcionário
             </button>
           </div>
+        </div>
+        
+        <div style={styles.registerSection}>
+          <p style={styles.registerText}>
+            Ainda não tem uma conta?
+          </p>
+          <Link 
+            to="/register" 
+            style={styles.registerLink}
+            onMouseOver={(e) => {
+              e.currentTarget.style.backgroundColor = '#e5e7eb';
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.backgroundColor = '#f3f4f6';
+            }}
+          >
+            Criar uma conta
+          </Link>
         </div>
       </div>
     </div>
