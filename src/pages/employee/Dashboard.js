@@ -74,12 +74,21 @@ const styles = {
     color: theme.colors.text.secondary,
     fontSize: theme.typography.fontSize.md,
     fontWeight: theme.typography.fontWeight.medium
+  },
+  errorMessage: {
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    color: theme.colors.error.dark,
+    padding: theme.spacing.lg,
+    marginBottom: theme.spacing.xl,
+    borderRadius: theme.borderRadius.md,
+    borderLeft: `4px solid ${theme.colors.error.main}`
   }
 };
 
 const EmployeeDashboard = () => {
   const { currentUser } = useAuth();
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [userFeedback, setUserFeedback] = useState([]);
   const [latestFeedback, setLatestFeedback] = useState(null);
   const [weeklyFeedbackSubmitted, setWeeklyFeedbackSubmitted] = useState(false);
@@ -88,49 +97,35 @@ const EmployeeDashboard = () => {
     // Carregar dados do usuário
     const loadUserData = async () => {
       try {
-        // Simulação de dados para teste
-        setTimeout(() => {
-          const feedbacks = [
-            { 
-              id: 1, 
-              date: '2025-04-22', 
-              productivity: 4, 
-              wellbeing: 5, 
-              comment: 'Semana produtiva, mas estou preocupado com os prazos do próximo projeto.' 
-            },
-            { 
-              id: 2, 
-              date: '2025-04-15', 
-              productivity: 3, 
-              wellbeing: 4, 
-              comment: 'Semana média, tive alguns desafios com a nova tecnologia.' 
-            },
-            { 
-              id: 3, 
-              date: '2025-04-08', 
-              productivity: 5, 
-              wellbeing: 4, 
-              comment: 'Excelente semana, consegui concluir todas as tarefas previstas.' 
-            },
-          ];
+        if (currentUser?.id) {
+          setLoading(true);
+          setError('');
           
+          // Buscar feedbacks do usuário
+          const feedbacks = await apiService.feedback.getMyFeedbacks();
           setUserFeedback(feedbacks);
           
           // Verificar se já enviou feedback esta semana
-          const latest = feedbacks[0];
-          setLatestFeedback(latest);
-          
-          // Se o último feedback foi há menos de 7 dias, considerar como enviado
-          const today = new Date();
-          const latestDate = new Date(latest.date);
-          const diffTime = Math.abs(today - latestDate);
-          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-          setWeeklyFeedbackSubmitted(diffDays < 7);
-          
-          setLoading(false);
-        }, 1000);
-      } catch (error) {
-        console.error('Erro ao carregar dados do usuário:', error);
+          if (feedbacks.length > 0) {
+            const latest = feedbacks[0]; // O primeiro deve ser o mais recente
+            setLatestFeedback(latest);
+            
+            // Verificar se o feedback foi enviado esta semana
+            const today = new Date();
+            const latestDate = new Date(latest.date);
+            const diffTime = Math.abs(today - latestDate);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            
+            // Se o último feedback foi há menos de 7 dias, considerar como enviado esta semana
+            setWeeklyFeedbackSubmitted(diffDays < 7);
+          } else {
+            setWeeklyFeedbackSubmitted(false);
+          }
+        }
+      } catch (err) {
+        console.error('Erro ao carregar dados do usuário:', err);
+        setError('Ocorreu um erro ao carregar seus dados. Por favor, recarregue a página ou tente novamente mais tarde.');
+      } finally {
         setLoading(false);
       }
     };
@@ -140,7 +135,7 @@ const EmployeeDashboard = () => {
   
   // Função para lidar com o envio de feedback
   const handleFeedbackSubmitted = (newFeedback) => {
-    // Adicionar o novo feedback ao estado
+    // Adicionar o novo feedback ao início do array de feedbacks (mais recente primeiro)
     setUserFeedback([newFeedback, ...userFeedback]);
     setLatestFeedback(newFeedback);
     setWeeklyFeedbackSubmitted(true);
@@ -174,6 +169,12 @@ const EmployeeDashboard = () => {
         <div style={styles.header}>
           <h1 style={styles.pageTitle}>Meu Espaço</h1>
         </div>
+        
+        {error && (
+          <div style={styles.errorMessage}>
+            {error}
+          </div>
+        )}
         
         <div style={styles.welcomeSection}>
           <h2 style={styles.welcomeTitle}>Olá, {currentUser?.name || 'Usuário'}!</h2>

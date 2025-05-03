@@ -185,18 +185,23 @@ const FeedbackForm = ({ onFeedbackSubmitted }) => {
       const feedbackData = {
         userId: currentUser.id,
         date: new Date().toISOString().split('T')[0],
-        ...formData
+        motivation: formData.motivation,
+        workload: formData.workload,
+        performance: formData.performance,
+        support: formData.support,
+        positiveEvent: formData.positiveEvent,
+        improvementSuggestion: formData.improvementSuggestion
       };
       
       // Enviar para a API
-      await apiService.feedback.submitFeedback(feedbackData);
+      const savedFeedback = await apiService.feedback.submitFeedback(feedbackData);
       
       // Marcar como enviado e resetar o formulário após alguns segundos
       setFeedbackSent(true);
       
-      // Chamar o callback (se fornecido)
+      // Chamar o callback (se fornecido) com os dados reais salvos
       if (onFeedbackSubmitted) {
-        onFeedbackSubmitted(feedbackData);
+        onFeedbackSubmitted(savedFeedback);
       }
       
       // Resetar após 3 segundos
@@ -237,7 +242,6 @@ const FeedbackForm = ({ onFeedbackSubmitted }) => {
     );
   };
   
-  // Manter o JSX original (só corrigindo a parte dos botões)
   return (
     <div style={styles.formContainer}>
       <div style={styles.header}>

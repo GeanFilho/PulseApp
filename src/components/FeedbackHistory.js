@@ -126,11 +126,10 @@ const FeedbackHistory = ({ feedbacks = [] }) => {
             year: 'numeric'
           });
           
-          // Tratar casos onde os dados podem ter nomenclaturas diferentes
-          // isso é importante para compatibilidade com dados legados
-          const motivation = feedback.motivation || feedback.wellbeing || 0;
-          const workload = feedback.workload || 5;
-          const performance = feedback.performance || feedback.productivity || 0;
+          // Garantir consistência nos nomes de campo
+          const motivation = feedback.motivation !== undefined ? feedback.motivation : (feedback.wellbeing || 0);
+          const workload = feedback.workload !== undefined ? feedback.workload : 5;
+          const performance = feedback.performance !== undefined ? feedback.performance : (feedback.productivity || 0);
           const support = feedback.support || 'Não informado';
           const positiveEvent = feedback.positiveEvent || feedback.comment || '';
           const improvementSuggestion = feedback.improvementSuggestion || '';
