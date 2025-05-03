@@ -10,7 +10,25 @@ import EmployeeDashboard from './pages/employee/Dashboard';
 import AdminDashboard from './pages/admin/Dashboard';
 import AdminSettings from './pages/admin/Settings';
 import ProfilePage from './pages/ProfilePage';
-import PrivateRoute from './components/PrivateRoute';
+
+// Componente para rotas protegidas
+const PrivateRoute = ({ element, requireAdmin = false }) => {
+  const token = localStorage.getItem('token');
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  
+  // Se não estiver autenticado, redireciona para login
+  if (!token) {
+    return <Navigate to="/login" />;
+  }
+  
+  // Se a rota exigir admin e o usuário não for admin
+  if (requireAdmin && user.role !== 'admin') {
+    return <Navigate to="/dashboard" />;
+  }
+  
+  // Se estiver tudo certo, renderiza o componente
+  return element;
+};
 
 // Componente principal da aplicação
 function App() {

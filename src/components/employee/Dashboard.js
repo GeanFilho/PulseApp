@@ -1,7 +1,7 @@
 // src/pages/employee/Dashboard.js
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import apiService from '../../services/apiService';
+import { getUserFeedbacks, getLatestFeedback } from '../../services/feedbackService';
 import FeedbackForm from '../../components/FeedbackForm';
 import FeedbackHistory from '../../components/FeedbackHistory';
 import Navbar from '../../components/Navbar';
@@ -74,12 +74,21 @@ const styles = {
     color: theme.colors.text.secondary,
     fontSize: theme.typography.fontSize.md,
     fontWeight: theme.typography.fontWeight.medium
+  },
+  errorMessage: {
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    color: theme.colors.error.dark,
+    padding: theme.spacing.lg,
+    marginBottom: theme.spacing.xl,
+    borderRadius: theme.borderRadius.md,
+    borderLeft: `4px solid ${theme.colors.error.main}`
   }
 };
 
 const EmployeeDashboard = () => {
   const { currentUser } = useAuth();
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [userFeedback, setUserFeedback] = useState([]);
   const [latestFeedback, setLatestFeedback] = useState(null);
   
@@ -90,13 +99,16 @@ const EmployeeDashboard = () => {
     // Carregar dados do usuário
     const loadUserData = async () => {
       try {
-        if (currentUser) {
+        if (currentUser?.id) {
+          setLoading(true);
+          setError('');
+          
           // Buscar feedbacks do usuário
-          const feedbacks = await apiService.feedback.getMyFeedbacks(currentUser.id);
+          const feedbacks = await getUserFeedbacks(currentUser.id);
           setUserFeedback(feedbacks);
           
           // Verificar se já enviou feedback esta semana
-          const latest = await apiService.feedback.getLatestFeedback(currentUser.id);
+          const latest = await getLatestFeedback(currentUser.id);
           setLatestFeedback(latest);
           
           if (latest) {
@@ -109,8 +121,9 @@ const EmployeeDashboard = () => {
             setWeeklyFeedbackSubmitted(diffDays < 7);
           }
         }
-      } catch (error) {
-        console.error('Erro ao carregar dados do usuário:', error);
+      } catch (err) {
+        console.error('Erro ao carregar dados do usuário:', err);
+        setError('Ocorreu um erro ao carregar seus dados. Por favor, recarregue a página ou tente novamente mais tarde.');
       } finally {
         setLoading(false);
       }
@@ -155,6 +168,12 @@ const EmployeeDashboard = () => {
         <div style={styles.header}>
           <h1 style={styles.pageTitle}>Meu Espaço</h1>
         </div>
+        
+        {error && (
+          <div style={styles.errorMessage}>
+            {error}
+          </div>
+        )}
         
         <div style={styles.welcomeSection}>
           <h2 style={styles.welcomeTitle}>Olá, {currentUser?.name || 'Usuário'}!</h2>

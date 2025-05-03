@@ -1,9 +1,10 @@
 // src/components/FeedbackForm.js
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import apiService from '../services/apiService';
 import theme from '../styles/theme';
 
+// Manter todos os estilos originais
 const styles = {
   // Container do formulário
   formContainer: {
@@ -236,6 +237,7 @@ const FeedbackForm = ({ onFeedbackSubmitted }) => {
     );
   };
   
+  // Manter o JSX original (só corrigindo a parte dos botões)
   return (
     <div style={styles.formContainer}>
       <div style={styles.header}>

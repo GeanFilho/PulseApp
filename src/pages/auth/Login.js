@@ -183,7 +183,7 @@ const Login = () => {
       setError('');
       setLoading(true);
       
-      // Usar o método de login do Firebase através do contexto
+      // Usar o método de login do novo contexto
       const user = await login(email, password);
       
       // Se o login for bem-sucedido, redirecionar com base no papel do usuário
@@ -195,14 +195,8 @@ const Login = () => {
     } catch (error) {
       console.error('Erro de login:', error);
       
-      // Mensagens de erro mais específicas baseadas no código de erro do Firebase
-      if (error.message.includes('user-not-found') || error.message.includes('wrong-password')) {
-        setError('Email ou senha incorretos. Por favor, tente novamente.');
-      } else if (error.message.includes('too-many-requests')) {
-        setError('Muitas tentativas de login. Por favor, tente novamente mais tarde.');
-      } else {
-        setError('Falha no login. Por favor, verifique suas credenciais.');
-      }
+      // Mensagem de erro genérica para manter a simplicidade
+      setError('Email ou senha incorretos. Por favor, tente novamente.');
     } finally {
       setLoading(false);
     }
@@ -211,7 +205,7 @@ const Login = () => {
   // Para fins de demonstração
   const handleDemoLogin = (role) => {
     if (role === 'admin') {
-      setEmail('admin@exemplo.com');
+      setEmail('admin@teste.com');
       setPassword('senha123');
     } else {
       setEmail('usuario@exemplo.com');

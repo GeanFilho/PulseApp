@@ -1,19 +1,7 @@
-// src/contexts/AuthContext.js
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import { auth, db } from '../firebase';
-import { 
-  onAuthStateChanged, 
-  createUserWithEmailAndPassword, 
-  signInWithEmailAndPassword, 
-  signOut 
-} from 'firebase/auth';
-import { 
-  doc, 
-  setDoc, 
-  getDoc 
-} from 'firebase/firestore';
+import apiService from '../services/apiService';
 
-// Cria o contexto
+// Criar o contexto
 const AuthContext = createContext(null);
 
 // Hook personalizado para usar o contexto
@@ -31,88 +19,43 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
 
-  // Monitorar estado de autenticação do Firebase
+  // Verificar autenticação ao iniciar
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        try {
-          // Buscar dados adicionais do usuário no Firestore
-          const userDoc = await getDoc(doc(db, "users", user.uid));
-          
-          if (userDoc.exists()) {
-            const userData = userDoc.data();
-            
-            const fullUser = {
-              id: user.uid,
-              name: userData.name,
-              email: userData.email,
-              department: userData.department,
-              role: userData.role
-            };
-            
-            setCurrentUser(fullUser);
-            setIsAdmin(userData.role === 'admin');
-          } else {
-            // Se o documento do usuário não existir, criar um básico
-            console.log('Documento de usuário não encontrado, criando documento básico');
-            await setDoc(doc(db, "users", user.uid), {
-              name: user.displayName || 'Usuário',
-              email: user.email,
-              department: 'Não definido',
-              role: 'employee',
-              createdAt: new Date()
-            });
-            
-            setCurrentUser({
-              id: user.uid,
-              name: user.displayName || 'Usuário',
-              email: user.email,
-              department: 'Não definido',
-              role: 'employee'
-            });
-            setIsAdmin(false);
-          }
-        } catch (error) {
-          console.error('Erro ao buscar dados do usuário:', error);
-          setCurrentUser(null);
-          setIsAdmin(false);
+    const checkAuth = async () => {
+      try {
+        // Verificar se há um token e usuário salvos
+        const token = localStorage.getItem('token');
+        const savedUser = localStorage.getItem('user');
+        
+        if (token && savedUser) {
+          const user = JSON.parse(savedUser);
+          setCurrentUser(user);
+          setIsAdmin(user.role === 'admin');
         }
-      } else {
+      } catch (error) {
+        console.error('Erro ao verificar autenticação:', error);
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        
         setCurrentUser(null);
         setIsAdmin(false);
+      } finally {
+        setLoading(false);
       }
-      
-      setLoading(false);
-    });
+    };
     
-    return () => unsubscribe();
+    checkAuth();
   }, []);
 
-  // Função de registro de usuário
+  // Função de registro
   const register = async (userData) => {
     try {
-      const { name, email, password, department, role } = userData;
+      const user = await apiService.auth.register(userData);
       
-      // Criar usuário no Firebase Authentication
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
+      setCurrentUser(user);
+      setIsAdmin(user.role === 'admin');
       
-      // Salvar dados adicionais no Firestore
-      await setDoc(doc(db, "users", user.uid), {
-        name,
-        email,
-        department,
-        role: role || 'employee',
-        createdAt: new Date()
-      });
-      
-      return {
-        id: user.uid,
-        name,
-        email,
-        department,
-        role: role || 'employee'
-      };
+      return user;
     } catch (error) {
       console.error('Erro no registro:', error);
       throw error;
@@ -122,26 +65,12 @@ export const AuthProvider = ({ children }) => {
   // Função de login
   const login = async (email, password) => {
     try {
-      // Fazer login no Firebase Authentication
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
+      const user = await apiService.auth.login(email, password);
       
-      // Buscar dados adicionais do usuário no Firestore
-      const userDoc = await getDoc(doc(db, "users", user.uid));
+      setCurrentUser(user);
+      setIsAdmin(user.role === 'admin');
       
-      if (userDoc.exists()) {
-        const userData = userDoc.data();
-        
-        return {
-          id: user.uid,
-          name: userData.name,
-          email: userData.email,
-          department: userData.department,
-          role: userData.role
-        };
-      } else {
-        throw new Error('Dados de usuário não encontrados');
-      }
+      return user;
     } catch (error) {
       console.error('Erro no login:', error);
       throw error;
@@ -149,38 +78,19 @@ export const AuthProvider = ({ children }) => {
   };
 
   // Função de logout
-  const logout = async () => {
-    try {
-      await signOut(auth);
-    } catch (error) {
-      console.error('Erro no logout:', error);
-      throw error;
-    }
+  const logout = () => {
+    apiService.auth.logout();
+    
+    setCurrentUser(null);
+    setIsAdmin(false);
   };
 
-  // Função para atualizar o perfil do usuário
+  // Função para atualizar o perfil
   const updateProfile = async (userData) => {
-    if (!currentUser) return null;
-    
     try {
-      // Atualizar dados no Firestore
-      await setDoc(doc(db, "users", currentUser.id), userData, { merge: true });
-      
-      // Atualizar o estado local
-      setCurrentUser({
-        ...currentUser,
-        ...userData
-      });
-      
-      // Atualizar isAdmin se o papel foi alterado
-      if (userData.role) {
-        setIsAdmin(userData.role === 'admin');
-      }
-      
-      return {
-        ...currentUser,
-        ...userData
-      };
+      // Implementar quando tivermos o endpoint para isso
+      console.log('Atualização de perfil ainda não implementada');
+      return currentUser;
     } catch (error) {
       console.error('Erro ao atualizar perfil:', error);
       throw error;
@@ -194,7 +104,8 @@ export const AuthProvider = ({ children }) => {
     register,
     login,
     logout,
-    updateProfile
+    updateProfile,
+    loading
   };
 
   return (

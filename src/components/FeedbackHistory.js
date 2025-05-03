@@ -108,6 +108,7 @@ const FeedbackHistory = ({ feedbacks = [] }) => {
     return (
       <div style={styles.emptyState}>
         <p>Nenhum feedback anterior encontrado.</p>
+        <p>Seu histórico de feedbacks aparecerá aqui quando você enviar seu primeiro feedback.</p>
       </div>
     );
   }
@@ -125,6 +126,15 @@ const FeedbackHistory = ({ feedbacks = [] }) => {
             year: 'numeric'
           });
           
+          // Tratar casos onde os dados podem ter nomenclaturas diferentes
+          // isso é importante para compatibilidade com dados legados
+          const motivation = feedback.motivation || feedback.wellbeing || 0;
+          const workload = feedback.workload || 5;
+          const performance = feedback.performance || feedback.productivity || 0;
+          const support = feedback.support || 'Não informado';
+          const positiveEvent = feedback.positiveEvent || feedback.comment || '';
+          const improvementSuggestion = feedback.improvementSuggestion || '';
+          
           return (
             <div key={feedback.id} style={styles.feedbackItem}>
               <div style={styles.itemHeader}>
@@ -134,58 +144,58 @@ const FeedbackHistory = ({ feedbacks = [] }) => {
               <div style={styles.statsGrid}>
                 <div style={styles.statItem}>
                   <p style={styles.statLabel}>
-                    Motivação: {feedback.motivation || feedback.wellbeing}/10
+                    Motivação: {motivation}/10
                   </p>
                   <div style={styles.ratingBar}>
-                    <div style={styles.ratingFill(feedback.motivation || feedback.wellbeing)}></div>
+                    <div style={styles.ratingFill(motivation)}></div>
                   </div>
                 </div>
                 
                 <div style={styles.statItem}>
                   <p style={styles.statLabel}>
-                    Carga de Trabalho: {feedback.workload || 5}/10
+                    Carga de Trabalho: {workload}/10
                   </p>
                   <div style={styles.ratingBar}>
-                    <div style={styles.ratingFill(feedback.workload || 5)}></div>
+                    <div style={styles.ratingFill(workload)}></div>
                   </div>
                 </div>
                 
                 <div style={styles.statItem}>
                   <p style={styles.statLabel}>
-                    Rendimento: {feedback.performance || feedback.productivity}/10
+                    Rendimento: {performance}/10
                   </p>
                   <div style={styles.ratingBar}>
-                    <div style={styles.ratingFill(feedback.performance || feedback.productivity)}></div>
+                    <div style={styles.ratingFill(performance)}></div>
                   </div>
                 </div>
                 
                 <div style={styles.statItem}>
                   <p style={styles.statLabel}>
-                    Apoio da equipe: {feedback.support || 'Não informado'}
+                    Apoio da equipe: {support}
                   </p>
                 </div>
               </div>
               
               {/* Comentários positivos */}
-              {(feedback.positiveEvent || feedback.comment) && (
+              {positiveEvent && (
                 <div style={styles.commentBox('positive')}>
                   <p style={styles.commentTitle('positive')}>
                     Pontos positivos:
                   </p>
                   <p style={styles.commentText('positive')}>
-                    {feedback.positiveEvent || feedback.comment}
+                    {positiveEvent}
                   </p>
                 </div>
               )}
               
               {/* Sugestões de melhoria */}
-              {feedback.improvementSuggestion && (
+              {improvementSuggestion && (
                 <div style={styles.commentBox('improvement')}>
                   <p style={styles.commentTitle('improvement')}>
                     Sugestões de melhoria:
                   </p>
                   <p style={styles.commentText('improvement')}>
-                    {feedback.improvementSuggestion}
+                    {improvementSuggestion}
                   </p>
                 </div>
               )}

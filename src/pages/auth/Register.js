@@ -202,20 +202,20 @@ const Register = () => {
       setLoading(true);
       setError('');
       
-      // Registrar o usuário usando o contexto de autenticação
+      // Registrar o usuário usando o novo contexto de autenticação
       const userData = {
         name: formData.name,
         email: formData.email,
         password: formData.password,
         department: formData.department,
-        role: formData.role // Aqui usamos a função selecionada pelo usuário
+        role: formData.role
       };
       
       await register(userData);
       
       setSuccess('Conta criada com sucesso! Redirecionando...');
       
-      // Redirecionar após um breve atraso com base na função selecionada
+      // Redirecionar após um breve atraso
       setTimeout(() => {
         if (formData.role === 'admin') {
           navigate('/admin');
@@ -226,17 +226,10 @@ const Register = () => {
     } catch (error) {
       console.error('Erro no registro:', error);
       
-      // Mensagens de erro mais específicas baseadas no código de erro do Firebase
-      if (error.message.includes('email-already-in-use')) {
+      if (error.message && error.message.includes('já está em uso')) {
         setError('Este e-mail já está em uso. Por favor, use outro e-mail ou faça login.');
-      } else if (error.message.includes('invalid-email')) {
-        setError('O e-mail informado é inválido. Por favor, verifique e tente novamente.');
-      } else if (error.message.includes('weak-password')) {
-        setError('A senha é muito fraca. Por favor, escolha uma senha mais forte.');
-      } else if (error.message.includes('permissions')) {
-        setError('Erro de permissões. Por favor, verifique as regras de segurança do Firebase.');
       } else {
-        setError('Falha no registro. Por favor, tente novamente mais tarde: ' + error.message);
+        setError('Falha no registro. Por favor, tente novamente mais tarde.');
       }
     } finally {
       setLoading(false);

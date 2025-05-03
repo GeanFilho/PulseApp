@@ -1,7 +1,7 @@
 // src/pages/admin/Dashboard.js
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import apiService from '../../services/apiService';
+import { getDashboardStats, getRecentFeedbacks } from '../../services/feedbackService';
 import Navbar from '../../components/Navbar';
 import ExportReport from '../../components/ExportReport';
 import theme from '../../styles/theme';
@@ -79,10 +79,10 @@ const styles = {
     const colors = ['#eef2ff', '#d1fae5', '#faf5ff'];
     const borderColors = [theme.colors.primary.main, theme.colors.success.main, theme.colors.secondary.main];
     return {
-      background: `linear-gradient(to bottom right, ${colors[index]}, white)`,
+      background: `linear-gradient(to bottom right, ${colors[index % 3]}, white)`,
       padding: theme.spacing.xl,
       borderRadius: theme.borderRadius.lg,
-      borderBottom: `4px solid ${borderColors[index]}`,
+      borderBottom: `4px solid ${borderColors[index % 3]}`,
       boxShadow: theme.shadows.sm
     };
   },
@@ -270,12 +270,28 @@ const styles = {
     color: theme.colors.text.secondary,
     fontSize: theme.typography.fontSize.md,
     fontWeight: theme.typography.fontWeight.medium
+  },
+  errorMessage: {
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    color: theme.colors.error.dark,
+    padding: theme.spacing.lg,
+    marginBottom: theme.spacing.xl,
+    borderRadius: theme.borderRadius.md,
+    borderLeft: `4px solid ${theme.colors.error.main}`
+  },
+  noDataMessage: {
+    padding: theme.spacing.xl,
+    backgroundColor: theme.colors.grey[50],
+    borderRadius: theme.borderRadius.md,
+    textAlign: 'center',
+    color: theme.colors.text.secondary
   }
 };
 
 const AdminDashboard = () => {
   const { currentUser } = useAuth();
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [period, setPeriod] = useState('last-week');
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const [dashboardData, setDashboardData] = useState({
@@ -290,7 +306,8 @@ const AdminDashboard = () => {
       totalEmployees: 0,
       pendingFeedbacks: 0
     },
-    recentFeedbacks: []
+    recentFeedbacks: [],
+    trendData: []
   });
   
   useEffect(() => {
@@ -298,20 +315,26 @@ const AdminDashboard = () => {
     const loadDashboardData = async () => {
       try {
         setLoading(true);
+        setError('');
         
         // Buscar estatísticas
-        const stats = await apiService.admin.getDashboardStats(period);
+        const stats = await getDashboardStats(period);
         
         // Buscar feedbacks recentes
-        const recentFeedbacks = await apiService.admin.getRecentFeedbacks(5);
+        const recentFeedbacks = await getRecentFeedbacks(5);
+        
+        // Simulando dados de tendência para o gráfico
+        // Em uma implementação real, você buscaria dados históricos agrupados por semana
+        const trendData = [7.2, 6.8, 7.0, 7.4, 7.6, 7.5, 7.8, stats.motivationAvg];
         
         setDashboardData({
           stats,
-          recentFeedbacks
+          recentFeedbacks,
+          trendData
         });
-      } catch (error) {
-        console.error('Erro ao carregar dados do dashboard:', error);
-        alert('Ocorreu um erro ao carregar os dados do dashboard. Por favor, tente novamente.');
+      } catch (err) {
+        console.error('Erro ao carregar dados do dashboard:', err);
+        setError('Ocorreu um erro ao carregar os dados do dashboard. Por favor, tente novamente mais tarde.');
       } finally {
         setLoading(false);
       }
@@ -319,9 +342,6 @@ const AdminDashboard = () => {
     
     loadDashboardData();
   }, [period]);
-  
-  // Dados do gráfico de tendência (simulados para demo)
-  const trendData = [7.2, 6.8, 7.0, 7.4, 7.6, 7.5, 7.8, 7.9];
   
   if (loading) {
     return (
@@ -345,6 +365,12 @@ const AdminDashboard = () => {
         <div style={styles.header}>
           <h1 style={styles.pageTitle}>Visão Geral da Equipe</h1>
         </div>
+        
+        {error && (
+          <div style={styles.errorMessage}>
+            {error}
+          </div>
+        )}
         
         <div style={styles.adminDashboard}>
           <div style={styles.dashboardHeader}>
@@ -380,7 +406,7 @@ const AdminDashboard = () => {
               <p style={styles.statValue}>{dashboardData.stats.responseRate}%</p>
               <div style={styles.statTrend()}>
                 <span style={styles.statTrendIcon}>↑</span>
-                +5% em relação à semana anterior
+                Comparado com período anterior
               </div>
             </div>
             <div style={styles.statCard(1)}>
@@ -388,7 +414,7 @@ const AdminDashboard = () => {
               <p style={styles.statValue}>{dashboardData.stats.motivationAvg}/10</p>
               <div style={styles.statTrend()}>
                 <span style={styles.statTrendIcon}>↑</span>
-                +0.3 em relação à semana anterior
+                Comparado com período anterior
               </div>
             </div>
             <div style={styles.statCard(2)}>
@@ -396,7 +422,7 @@ const AdminDashboard = () => {
               <p style={styles.statValue}>{dashboardData.stats.workloadAvg}/10</p>
               <div style={styles.statTrend(true)}>
                 <span style={styles.statTrendIcon}>↑</span>
-                +0.5 em relação à semana anterior
+                Comparado com período anterior
               </div>
             </div>
           </div>
@@ -408,7 +434,7 @@ const AdminDashboard = () => {
               <p style={styles.statValue}>{dashboardData.stats.performanceAvg}/10</p>
               <div style={styles.statTrend()}>
                 <span style={styles.statTrendIcon}>↑</span>
-                +0.2 em relação à semana anterior
+                Comparado com período anterior
               </div>
             </div>
             <div style={styles.statCard(0)}>
@@ -434,7 +460,7 @@ const AdminDashboard = () => {
             <h3 style={styles.chartTitle}>Tendência de Motivação</h3>
             
             <div style={styles.chart}>
-              {trendData.map((value, index) => (
+              {dashboardData.trendData.map((value, index) => (
                 <div key={index} style={styles.chartBar(value)}>
                   <span style={styles.chartBarValue}>{value}</span>
                 </div>
@@ -454,45 +480,51 @@ const AdminDashboard = () => {
           </div>
           
           <h3 style={styles.feedbackListTitle}>Feedbacks Recentes</h3>
-          <div style={styles.feedbackList}>
-            {dashboardData.recentFeedbacks.map((item) => (
-              <div key={item.id} style={styles.feedbackItem}>
-                <div style={styles.feedbackItemHeader}>
-                  <span style={styles.feedbackAuthor}>{item.name}</span>
-                  <span style={styles.feedbackDept}>{item.dept}</span>
-                </div>
-                
-                <div style={styles.feedbackMetrics}>
-                  <span style={styles.metricBadge('motivation')}>
-                    Motivação: {item.motivation}/10
-                  </span>
-                  <span style={styles.metricBadge('workload')}>
-                    Carga: {item.workload}/10
-                  </span>
-                  <span style={styles.metricBadge('performance')}>
-                    Rendimento: {item.performance}/10
-                  </span>
-                  <span style={styles.metricBadge('support')}>
-                    Apoio: {item.support}
-                  </span>
-                </div>
-                
-                <div style={styles.feedbackComments}>
-                  {item.positiveEvent && (
-                    <div style={styles.commentBox('positive')}>
-                      <strong>Positivo:</strong> {item.positiveEvent}
-                    </div>
-                  )}
+          {dashboardData.recentFeedbacks.length === 0 ? (
+            <div style={styles.noDataMessage}>
+              <p>Nenhum feedback encontrado para o período selecionado.</p>
+            </div>
+          ) : (
+            <div style={styles.feedbackList}>
+              {dashboardData.recentFeedbacks.map((item) => (
+                <div key={item.id} style={styles.feedbackItem}>
+                  <div style={styles.feedbackItemHeader}>
+                    <span style={styles.feedbackAuthor}>{item.name}</span>
+                    <span style={styles.feedbackDept}>{item.dept}</span>
+                  </div>
                   
-                  {item.improvementSuggestion && (
-                    <div style={styles.commentBox('improvement')}>
-                      <strong>Sugestão:</strong> {item.improvementSuggestion}
-                    </div>
-                  )}
+                  <div style={styles.feedbackMetrics}>
+                    <span style={styles.metricBadge('motivation')}>
+                      Motivação: {item.motivation}/10
+                    </span>
+                    <span style={styles.metricBadge('workload')}>
+                      Carga: {item.workload}/10
+                    </span>
+                    <span style={styles.metricBadge('performance')}>
+                      Rendimento: {item.performance}/10
+                    </span>
+                    <span style={styles.metricBadge('support')}>
+                      Apoio: {item.support}
+                    </span>
+                  </div>
+                  
+                  <div style={styles.feedbackComments}>
+                    {item.positiveEvent && (
+                      <div style={styles.commentBox('positive')}>
+                        <strong>Positivo:</strong> {item.positiveEvent}
+                      </div>
+                    )}
+                    
+                    {item.improvementSuggestion && (
+                      <div style={styles.commentBox('improvement')}>
+                        <strong>Sugestão:</strong> {item.improvementSuggestion}
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
           
           <button style={styles.viewAllButton}>
             Ver todos os feedbacks
