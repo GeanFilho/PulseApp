@@ -1,3 +1,4 @@
+// src/services/apiService.js
 import axios from 'axios';
 
 // URL base para as requisições
@@ -42,7 +43,7 @@ api.interceptors.response.use(
   }
 );
 
-// Serviço de API
+// Serviço de API para PostgreSQL
 const apiService = {
   // Autenticação
   auth: {
@@ -143,6 +144,16 @@ const apiService = {
         return response.data;
       } catch (error) {
         console.error('Erro ao buscar feedbacks recentes:', error);
+        throw error.response ? error.response.data : error;
+      }
+    },
+    
+    getDashboard: async (period = 'last-week') => {
+      try {
+        const response = await api.get(`/admin/dashboard?period=${period}`);
+        return response.data;
+      } catch (error) {
+        console.error('Erro ao buscar dados do dashboard:', error);
         throw error.response ? error.response.data : error;
       }
     }

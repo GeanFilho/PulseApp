@@ -1,10 +1,10 @@
 // src/pages/admin/Dashboard.js
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
+import apiService from '../../services/apiService';
 import Navbar from '../../components/Navbar';
 import ExportReport from '../../components/ExportReport';
 import theme from '../../styles/theme';
-import axios from 'axios';
 
 const styles = {
   container: {
@@ -194,7 +194,6 @@ const styles = {
   },
   feedbackMetrics: {
     display: 'flex',
-    flexWrap: 'wrap',
     gap: theme.spacing.md,
     marginBottom: theme.spacing.md
   },
@@ -308,110 +307,40 @@ const AdminDashboard = () => {
       pendingFeedbacks: 0
     },
     recentFeedbacks: [],
-    trendData: [0, 0, 0, 0, 0, 0, 0, 0]
+    trendData: []
   });
   
-  // Como não temos os endpoints de admin específicos ainda, vamos simular esses dados
-  // Isso evita o erro 404
   useEffect(() => {
+    // Carregar dados do dashboard do admin
     const loadDashboardData = async () => {
       try {
         setLoading(true);
         setError('');
         
-        // Se não conseguirmos buscar os dados da API, usaremos dados simulados
-        // para que o dashboard funcione enquanto o backend é ajustado
+        // Buscar estatísticas
+        const stats = await apiService.admin.getDashboardStats(period);
         
-        // Estatísticas simuladas
-        const stats = {
-          responseRate: 87,
-          motivationAvg: 7.6,
-          workloadAvg: 6.2,
-          performanceAvg: 7.8,
-          supportYesPercentage: 64,
-          supportPartialPercentage: 28,
-          supportNoPercentage: 8,
-          totalEmployees: 42,
-          pendingFeedbacks: 5
-        };
+        // Buscar feedbacks recentes
+        const recentFeedbacks = await apiService.admin.getRecentFeedbacks(5);
         
-        // Feedbacks recentes simulados
-        const recentFeedbacks = [
-          { 
-            id: 1, 
-            name: 'Ana Silva', 
-            dept: 'Marketing', 
-            date: '2025-04-24', 
-            motivation: 9,
-            workload: 7,
-            performance: 8,
-            support: 'Sim',
-            positiveEvent: 'Concluímos o projeto de campanha digital antes do prazo previsto.',
-            improvementSuggestion: 'Gostaria de ter mais oportunidades de colaboração entre equipes.'
-          },
-          { 
-            id: 2, 
-            name: 'Carlos Mendes', 
-            dept: 'Desenvolvimento', 
-            date: '2025-04-23', 
-            motivation: 5,
-            workload: 3,
-            performance: 6,
-            support: 'Em partes',
-            positiveEvent: 'Implementei uma nova funcionalidade que estava planejada há muito tempo.',
-            improvementSuggestion: 'Estamos com alguns problemas técnicos que estão atrasando entregas.'
-          },
-          { 
-            id: 3, 
-            name: 'Julia Oliveira', 
-            dept: 'RH', 
-            date: '2025-04-22', 
-            motivation: 10,
-            workload: 8,
-            performance: 9,
-            support: 'Sim',
-            positiveEvent: 'Lançamos o novo programa de mentoria com muito sucesso!',
-            improvementSuggestion: 'O novo programa de mentoria está recebendo feedback muito positivo!'
-          }
-        ];
+        // Buscar dados de tendência
+        const trendData = await apiService.admin.getTrendData(period);
         
-        // Dados de tendência simulados
-        const trendData = [7.2, 6.8, 7.0, 7.4, 7.6, 7.5, 7.8, 7.9];
-        
-        // Atualizar o estado com os dados simulados
         setDashboardData({
           stats,
           recentFeedbacks,
-          trendData
+          trendData: trendData || [0, 0, 0, 0, 0, 0, 0, 0] // Valor padrão se não houver dados
         });
-        
-        // Tentar buscar os dados reais da API
-        try {
-          // Usar a função de apiService em vez das chamadas diretas axios
-          // Verificar se temos os dados reais do usuário logado
-          if (currentUser?.id) {
-            // Obter todos os feedback do sistema
-            const feedbackResponse = await axios.get('/api/feedback');
-            if (feedbackResponse.data && feedbackResponse.data.length > 0) {
-              // Se conseguirmos os dados reais, atualizamos o dashboard
-              // Esta parte pode ser implementada mais tarde quando o backend estiver pronto
-              console.log('Dados reais carregados com sucesso:', feedbackResponse.data);
-            }
-          }
-        } catch (apiError) {
-          // Se falhar em obter dados reais, não mostramos erro, pois já temos os dados simulados
-          console.log('Não foi possível carregar dados reais, usando dados simulados');
-        }
       } catch (err) {
         console.error('Erro ao carregar dados do dashboard:', err);
-        setError(`Ocorreu um erro ao carregar os dados do dashboard. Por favor, tente novamente mais tarde.`);
+        setError('Ocorreu um erro ao carregar os dados do dashboard. Por favor, tente novamente mais tarde.');
       } finally {
         setLoading(false);
       }
     };
     
     loadDashboardData();
-  }, [period, currentUser]);
+  }, [period]);
   
   if (loading) {
     return (
