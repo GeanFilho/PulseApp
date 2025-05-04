@@ -1,9 +1,8 @@
+// src/components/PulseApp.js
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import Notifications from './Notifications';
 import ExportReport from './ExportReport';
-
 
 // Estilos embutidos como objetos JavaScript
 const styles = {
@@ -137,34 +136,6 @@ const styles = {
     color: '#111827',
     margin: 0
   },
-  notificationButton: {
-    position: 'relative',
-    backgroundColor: 'white',
-    border: 'none',
-    width: '40px',
-    height: '40px',
-    borderRadius: '50%',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-    cursor: 'pointer'
-  },
-  notificationCount: {
-    position: 'absolute',
-    top: '-5px',
-    right: '-5px',
-    width: '20px',
-    height: '20px',
-    backgroundColor: '#ef4444',
-    color: 'white',
-    fontSize: '0.75rem',
-    borderRadius: '50%',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)'
-  },
 
   // Feedback Form
   feedbackForm: {
@@ -266,7 +237,7 @@ const styles = {
     cursor: 'pointer'
   },
   submitButtonDisabled: {
-    opacity: 0.7,
+    opacity: '0.7',
     cursor: 'not-allowed'
   },
   successMessage: {
@@ -485,7 +456,6 @@ const styles = {
 const PulseApp = ({ userFeedback = [], adminData = {} }) => {
   const [activeTab, setActiveTab] = useState('home');
   const [feedbackSent, setFeedbackSent] = useState(false);
-  const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [exportModalOpen, setExportModalOpen] = useState(false);
   
   // Novo estado para a pesquisa de clima
@@ -636,7 +606,7 @@ const PulseApp = ({ userFeedback = [], adminData = {} }) => {
                   marginBottom: '16px'
                 }}>
                   <div>
-                    <p style={{ margin: '0 0 4px 0', fontWeight: '500' }}>Motivação: {feedback.motivation || feedback.wellbeing}/10</p>
+                    <p style={{ margin: '0 0 4px 0', fontWeight: '500' }}>Motivação: {feedback.motivation || feedback.wellbeing || 0}/10</p>
                     {renderRatingBar(feedback.motivation || feedback.wellbeing)}
                   </div>
                   
@@ -831,6 +801,17 @@ const PulseApp = ({ userFeedback = [], adminData = {} }) => {
             </div>
           </div>
           
+          <div style={styles.formGroup}>
+            <label style={styles.ratingLabel}>
+              5. Conte-nos sobre algo positivo que aconteceu na sua semana
+            </label>
+            <textarea
+              style={styles.formControl}
+              placeholder="Compartilhe conosco os pontos altos da sua semana..."
+              value={surveyData.positiveEvent}
+              onChange={(e) => handleSurveyChange('positiveEvent', e.target.value)}
+            ></textarea>
+          </div>
 
           <div style={styles.formGroup}>
             <label style={styles.ratingLabel}>
@@ -906,7 +887,6 @@ const PulseApp = ({ userFeedback = [], adminData = {} }) => {
               Exportar
             </button>
 
-   
             <ExportReport 
               isOpen={exportModalOpen} 
               onClose={() => setExportModalOpen(false)} 
@@ -1226,7 +1206,6 @@ const PulseApp = ({ userFeedback = [], adminData = {} }) => {
             </ul>
           </nav>
         </div>
-        
       </div>
       
       {/* Main Content */}
@@ -1236,22 +1215,6 @@ const PulseApp = ({ userFeedback = [], adminData = {} }) => {
             <h1 style={styles.pageTitle}>
               {isAdmin ? 'Visão Geral da Equipe' : 'Meu Espaço'}
             </h1>
-            <div>
-            <button 
-              style={styles.notificationButton}
-              onClick={() => setNotificationsOpen(!notificationsOpen)}>
-              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="#4f46e5" viewBox="0 0 16 16">
-                <path d="M8 16a2 2 0 0 0 2-2H6a2 2 0 0 0 2 2zM8 1.918l-.797.161A4.002 4.002 0 0 0 4 6c0 .628-.134 2.197-.459 3.742-.16.767-.376 1.566-.663 2.258h10.244c-.287-.692-.502-1.49-.663-2.258C12.134 8.197 12 6.628 12 6a4.002 4.002 0 0 0-3.203-3.92L8 1.917zM14.22 12c.223.447.481.801.78 1H1c.299-.199.557-.553.78-1C2.68 10.2 3 6.88 3 6c0-2.42 1.72-4.44 4.005-4.901a1 1 0 1 1 1.99 0A5.002 5.002 0 0 1 13 6c0 .88.32 4.2 1.22 6z"/>
-              </svg>
-              <span style={styles.notificationCount}>3</span>
-            </button>
-            {notificationsOpen && (
-              <Notifications 
-                isOpen={notificationsOpen} 
-                onClose={() => setNotificationsOpen(false)} 
-              />
-              )}
-            </div>
           </div>
           
           {isAdmin ? <AdminDashboard /> : <WeeklyForm />}

@@ -69,22 +69,21 @@ const styles = {
     borderRadius: '4px',
     transition: 'width 0.3s ease'
   }),
-  commentBox: (type) => ({
-    backgroundColor: type === 'positive' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(245, 158, 11, 0.1)',
+  commentBox: {
+    backgroundColor: 'rgba(245, 158, 11, 0.1)',
     padding: theme.spacing.md,
     borderRadius: theme.borderRadius.md,
-    marginBottom: type === 'positive' ? theme.spacing.md : 0,
-    borderLeft: `4px solid ${type === 'positive' ? theme.colors.success.main : theme.colors.warning.main}`
-  }),
-  commentTitle: (type) => ({
+    borderLeft: `4px solid ${theme.colors.warning.main}`
+  },
+  commentTitle: {
     margin: `0 0 ${theme.spacing.xs} 0`,
     fontWeight: theme.typography.fontWeight.medium,
-    color: type === 'positive' ? theme.colors.success.dark : theme.colors.warning.dark
-  }),
-  commentText: (type) => ({
+    color: theme.colors.warning.dark
+  },
+  commentText: {
     margin: 0,
-    color: type === 'positive' ? theme.colors.success.dark : theme.colors.warning.dark
-  }),
+    color: theme.colors.warning.dark
+  },
   emptyState: {
     padding: theme.spacing.xl,
     textAlign: 'center',
@@ -131,7 +130,6 @@ const FeedbackHistory = ({ feedbacks = [] }) => {
           const workload = feedback.workload !== undefined ? feedback.workload : 5;
           const performance = feedback.performance !== undefined ? feedback.performance : (feedback.productivity || 0);
           const support = feedback.support || 'Não informado';
-          const positiveEvent = feedback.positiveEvent || feedback.comment || '';
           const improvementSuggestion = feedback.improvementSuggestion || '';
           
           return (
@@ -175,25 +173,13 @@ const FeedbackHistory = ({ feedbacks = [] }) => {
                 </div>
               </div>
               
-              {/* Comentários positivos */}
-              {positiveEvent && (
-                <div style={styles.commentBox('positive')}>
-                  <p style={styles.commentTitle('positive')}>
-                    Pontos positivos:
-                  </p>
-                  <p style={styles.commentText('positive')}>
-                    {positiveEvent}
-                  </p>
-                </div>
-              )}
-              
               {/* Sugestões de melhoria */}
               {improvementSuggestion && (
-                <div style={styles.commentBox('improvement')}>
-                  <p style={styles.commentTitle('improvement')}>
+                <div style={styles.commentBox}>
+                  <p style={styles.commentTitle}>
                     Sugestões de melhoria:
                   </p>
-                  <p style={styles.commentText('improvement')}>
+                  <p style={styles.commentText}>
                     {improvementSuggestion}
                   </p>
                 </div>

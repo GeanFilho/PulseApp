@@ -143,7 +143,7 @@ const Register = () => {
     email: '',
     password: '',
     confirmPassword: '',
-    department: 'Desenvolvimento',
+    department: 'TI',
     role: 'employee' // Valor padrão é funcionário
   });
   
@@ -322,11 +322,13 @@ const Register = () => {
               onChange={handleChange}
               required
             >
-              <option value="Desenvolvimento">Desenvolvimento</option>
-              <option value="Marketing">Marketing</option>
-              <option value="RH">RH</option>
-              <option value="Vendas">Vendas</option>
-              <option value="Financeiro">Financeiro</option>
+              <option value="Gestão">Gestão</option>
+              <option value="TI">TI</option>
+              <option value="Copywriter">Copywriter</option>
+              <option value="Gestão de Tráfego">Gestão de Tráfego</option>
+              <option value="Edição de Vídeo">Edição de Vídeo</option>
+              <option value="Email Marketing">Email Marketing</option>
+              <option value="Assistentes">Assistentes</option>
             </select>
           </div>
           

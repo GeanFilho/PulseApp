@@ -154,20 +154,15 @@ const AdminSettings = () => {
     requireApproval: false
   });
   
-  const [notificationSettings, setNotificationSettings] = useState({
-    sendEmailReminders: true,
-    sendPushNotifications: true,
-    alertLowParticipation: true,
-    alertNegativeTrends: true
-  });
-  
   // Lista de departamentos para demonstração
   const [departments, setDepartments] = useState([
-    { id: 1, name: 'Desenvolvimento', manager: 'João Silva', memberCount: 12 },
-    { id: 2, name: 'Marketing', manager: 'Ana Oliveira', memberCount: 8 },
-    { id: 3, name: 'RH', manager: 'Maria Santos', memberCount: 5 },
-    { id: 4, name: 'Vendas', manager: 'Roberto Alves', memberCount: 10 },
-    { id: 5, name: 'Financeiro', manager: 'Fernanda Costa', memberCount: 6 }
+    { id: 1, name: 'Gestão', manager: 'Maria Santos', memberCount: 5 },
+    { id: 2, name: 'TI', manager: 'João Silva', memberCount: 12 },
+    { id: 3, name: 'Copywriter', manager: 'Ana Oliveira', memberCount: 6 },
+    { id: 4, name: 'Gestão de Tráfego', manager: 'Roberto Alves', memberCount: 8 },
+    { id: 5, name: 'Edição de Vídeo', manager: 'Lucas Mendes', memberCount: 4 },
+    { id: 6, name: 'Email Marketing', manager: 'Carolina Costa', memberCount: 3 },
+    { id: 7, name: 'Assistentes', manager: 'Fernanda Sousa', memberCount: 7 }
   ]);
   
   // Handler para mudanças nas configurações gerais
@@ -179,19 +174,10 @@ const AdminSettings = () => {
     });
   };
   
-  // Handler para mudanças nas configurações de notificação
-  const handleNotificationChange = (e) => {
-    const { name, checked } = e.target;
-    setNotificationSettings({
-      ...notificationSettings,
-      [name]: checked
-    });
-  };
-  
   // Simulação de salvar as configurações
   const handleSave = () => {
     // Aqui você implementaria a lógica para salvar no backend
-    console.log('Salvando configurações:', { generalSettings, notificationSettings });
+    console.log('Salvando configurações:', { generalSettings });
     
     setSaved(true);
     
@@ -297,64 +283,6 @@ const AdminSettings = () => {
                   Exigir aprovação para feedback público
                 </label>
               </div>
-            </div>
-          </div>
-        </div>
-        
-        <div style={styles.settingsCard}>
-          <h2 style={styles.cardTitle}>Configurações de Notificação</h2>
-          
-          <div style={styles.formGroup}>
-            <div style={styles.checkbox}>
-              <input
-                type="checkbox"
-                id="sendEmailReminders"
-                name="sendEmailReminders"
-                checked={notificationSettings.sendEmailReminders}
-                onChange={handleNotificationChange}
-              />
-              <label style={styles.checkboxLabel} htmlFor="sendEmailReminders">
-                Enviar lembretes por e-mail
-              </label>
-            </div>
-            
-            <div style={styles.checkbox}>
-              <input
-                type="checkbox"
-                id="sendPushNotifications"
-                name="sendPushNotifications"
-                checked={notificationSettings.sendPushNotifications}
-                onChange={handleNotificationChange}
-              />
-              <label style={styles.checkboxLabel} htmlFor="sendPushNotifications">
-                Enviar notificações push
-              </label>
-            </div>
-            
-            <div style={styles.checkbox}>
-              <input
-                type="checkbox"
-                id="alertLowParticipation"
-                name="alertLowParticipation"
-                checked={notificationSettings.alertLowParticipation}
-                onChange={handleNotificationChange}
-              />
-              <label style={styles.checkboxLabel} htmlFor="alertLowParticipation">
-                Alertar sobre baixa participação
-              </label>
-            </div>
-            
-            <div style={styles.checkbox}>
-              <input
-                type="checkbox"
-                id="alertNegativeTrends"
-                name="alertNegativeTrends"
-                checked={notificationSettings.alertNegativeTrends}
-                onChange={handleNotificationChange}
-              />
-              <label style={styles.checkboxLabel} htmlFor="alertNegativeTrends">
-                Alertar sobre tendências negativas
-              </label>
             </div>
           </div>
         </div>

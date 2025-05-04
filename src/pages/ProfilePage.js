@@ -136,11 +136,6 @@ const ProfilePage = () => {
     department: '',
     position: '',
     phone: '',
-    notificationPreferences: {
-      email: true,
-      push: true,
-      weekly: true,
-    },
   });
   
   const [status, setStatus] = useState({ type: '', message: '' });
@@ -152,14 +147,9 @@ const ProfilePage = () => {
       setFormData({
         name: currentUser.name || '',
         email: currentUser.email || '',
-        department: 'Desenvolvimento',
+        department: 'TI',
         position: 'Desenvolvedor Front-end',
         phone: '(11) 98765-4321',
-        notificationPreferences: {
-          email: true,
-          push: true,
-          weekly: true,
-        },
       });
     }
   }, [currentUser]);
@@ -169,16 +159,6 @@ const ProfilePage = () => {
     setFormData({
       ...formData,
       [name]: value,
-    });
-  };
-  
-  const handleNotificationChange = (type) => {
-    setFormData({
-      ...formData,
-      notificationPreferences: {
-        ...formData.notificationPreferences,
-        [type]: !formData.notificationPreferences[type],
-      },
     });
   };
   
@@ -212,7 +192,7 @@ const ProfilePage = () => {
     <div style={styles.container}>
       <div style={styles.header}>
         <h1 style={styles.title}>Perfil de Usuário</h1>
-        <p style={styles.subtitle}>Atualize suas informações pessoais e preferências</p>
+        <p style={styles.subtitle}>Atualize suas informações pessoais</p>
       </div>
       
       {status.message && (
@@ -274,11 +254,13 @@ const ProfilePage = () => {
                 onChange={handleInputChange}
                 required
               >
-                <option value="Desenvolvimento">Desenvolvimento</option>
-                <option value="Marketing">Marketing</option>
-                <option value="RH">RH</option>
-                <option value="Vendas">Vendas</option>
-                <option value="Financeiro">Financeiro</option>
+                <option value="Gestão">Gestão</option>
+                <option value="TI">TI</option>
+                <option value="Copywriter">Copywriter</option>
+                <option value="Gestão de Tráfego">Gestão de Tráfego</option>
+                <option value="Edição de Vídeo">Edição de Vídeo</option>
+                <option value="Email Marketing">Email Marketing</option>
+                <option value="Assistentes">Assistentes</option>
               </select>
             </div>
             
@@ -306,39 +288,6 @@ const ProfilePage = () => {
               value={formData.phone}
               onChange={handleInputChange}
             />
-          </div>
-        </div>
-        
-        <div style={styles.formSection}>
-          <h2 style={styles.sectionTitle}>Preferências de Notificação</h2>
-          
-          <div style={{...styles.formGroup, display: 'flex', gap: '16px', flexDirection: 'column'}}>
-            <label style={{display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer'}}>
-              <input
-                type="checkbox"
-                checked={formData.notificationPreferences.email}
-                onChange={() => handleNotificationChange('email')}
-              />
-              Receber notificações por email
-            </label>
-            
-            <label style={{display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer'}}>
-              <input
-                type="checkbox"
-                checked={formData.notificationPreferences.push}
-                onChange={() => handleNotificationChange('push')}
-              />
-              Receber notificações push
-            </label>
-            
-            <label style={{display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer'}}>
-              <input
-                type="checkbox"
-                checked={formData.notificationPreferences.weekly}
-                onChange={() => handleNotificationChange('weekly')}
-              />
-              Receber resumo semanal de atividades
-            </label>
           </div>
         </div>
         

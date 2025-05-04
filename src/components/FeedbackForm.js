@@ -153,7 +153,6 @@ const FeedbackForm = ({ onFeedbackSubmitted }) => {
     workload: null,
     performance: null,
     support: null,
-    positiveEvent: '',
     improvementSuggestion: ''
   });
   
@@ -189,7 +188,6 @@ const FeedbackForm = ({ onFeedbackSubmitted }) => {
         workload: formData.workload,
         performance: formData.performance,
         support: formData.support,
-        positiveEvent: formData.positiveEvent,
         improvementSuggestion: formData.improvementSuggestion
       };
       
@@ -212,7 +210,6 @@ const FeedbackForm = ({ onFeedbackSubmitted }) => {
           workload: null,
           performance: null,
           support: null,
-          positiveEvent: '',
           improvementSuggestion: ''
         });
       }, 3000);
@@ -308,19 +305,7 @@ const FeedbackForm = ({ onFeedbackSubmitted }) => {
       
       <div style={styles.formGroup}>
         <label style={styles.ratingLabel}>
-          5. Conte-nos sobre algo positivo que aconteceu na sua semana
-        </label>
-        <textarea
-          style={styles.textArea}
-          placeholder="Compartilhe conosco os pontos altos da sua semana..."
-          value={formData.positiveEvent}
-          onChange={(e) => handleChange('positiveEvent', e.target.value)}
-        ></textarea>
-      </div>
-      
-      <div style={styles.formGroup}>
-        <label style={styles.ratingLabel}>
-          6. Existe algo que poderíamos melhorar para a próxima semana?
+          5. Existe algo que poderíamos melhorar para a próxima semana?
         </label>
         <textarea
           style={styles.textArea}
