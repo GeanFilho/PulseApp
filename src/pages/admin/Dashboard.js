@@ -53,62 +53,90 @@ const AdminDashboard = () => {
   const fetchUserCount = async () => {
     try {
       console.log("Atualizando contagem de usuários...");
-      const response = await apiService.admin.getUserCount();
       
-      // Obter a contagem de usuários ocultos
+      // Forçar atualização lendo diretamente do localStorage para ter o valor mais recente
+      const savedCount = localStorage.getItem('simulatedUserCount');
+      const totalCount = savedCount ? parseInt(savedCount) : 3;
+      
+      // Obter a lista de usuários ocultos
       const hiddenUsers = localStorage.getItem('hiddenUsers');
       const hiddenUserIds = hiddenUsers ? JSON.parse(hiddenUsers) : [];
       const hiddenUserCount = hiddenUserIds.length;
       
-      console.log('Contagem total:', response.count);
+      console.log('Contagem total de usuários (direto do localStorage):', totalCount);
       console.log('IDs de usuários ocultos:', hiddenUserIds);
       console.log('Quantidade de usuários ocultos:', hiddenUserCount);
       
-      // Definir a contagem de usuários visíveis (total menos ocultos)
-      // Certificar-se de não ficar abaixo de zero
-      const visibleCount = Math.max((response.count || 0) - hiddenUserCount, 0);
+      // Calcular contagem visível (total menos ocultos)
+      // Garantir que não fique abaixo de zero
+      const visibleCount = Math.max(totalCount - hiddenUserCount, 0);
       console.log('Contagem final de usuários visíveis:', visibleCount);
       
-      // Definir o estado atual para o número de usuários visíveis
+      // Atualizar o estado com a contagem visível
       setUserCount(visibleCount);
       
-      // Atualizar o localStorage para uso em outras partes da aplicação
-      localStorage.setItem('simulatedUserCount', String(response.count || 0));
+      return visibleCount;
     } catch (err) {
       console.error('Erro ao buscar contagem de usuários:', err);
-      setUserCount(3); // Valor padrão se ocorrer erro
+      // Padrão para um valor razoável se tudo falhar
+      setUserCount(3);
+      return 3;
     }
   };
   
   // Adicione estas funções ao seu componente AdminDashboard
   useEffect(() => {
-    // Função para lidar com o evento personalizado de mudança de visibilidade
+    // Função para lidar com eventos de mudança de visibilidade do usuário
     const handleVisibilityChange = (event) => {
-      console.log('Evento de visibilidade detectado:', event);
+      console.log('Evento de visibilidade de usuário detectado:', event.detail);
+      
+      // Forçar atualização da contagem completa
       fetchUserCount();
+    };
+    
+    // Função específica para eventos de contagem
+    const handleCountChange = (event) => {
+      console.log('Evento de alteração de contagem detectado:', event.detail);
+      
+      // Se o evento incluir uma contagem atualizada, use-a diretamente
+      if (event.detail && event.detail.count !== undefined) {
+        const hiddenUsers = localStorage.getItem('hiddenUsers');
+        const hiddenUserIds = hiddenUsers ? JSON.parse(hiddenUsers) : [];
+        const visibleCount = Math.max(event.detail.count - hiddenUserIds.length, 0);
+        
+        console.log('Atualizando contagem diretamente para:', visibleCount);
+        setUserCount(visibleCount);
+      } else {
+        // Caso contrário, faça uma nova busca completa
+        fetchUserCount();
+      }
     };
     
     // Função para lidar com o evento de storage
     const handleStorageChange = (event) => {
-      if (event.key === 'hiddenUsers') {
-        console.log('Evento de storage detectado para hiddenUsers:', event);
+      if (event.key === 'hiddenUsers' || event.key === 'simulatedUserCount') {
+        console.log('Evento de storage detectado para:', event.key);
         fetchUserCount();
       }
     };
     
     // Registrar os ouvintes de eventos
     document.addEventListener('userVisibilityChanged', handleVisibilityChange);
-    document.addEventListener('userCountChanged', handleVisibilityChange);
+    document.addEventListener('userCountChanged', handleCountChange);
     window.addEventListener('storage', handleStorageChange);
     
     // Buscar contagem inicial
     fetchUserCount();
     
+    // Configurar um intervalo para verificar periodicamente
+    const interval = setInterval(fetchUserCount, 10000); // 10 segundos
+    
     // Função de limpeza para remover os ouvintes
     return () => {
       document.removeEventListener('userVisibilityChanged', handleVisibilityChange);
-      document.removeEventListener('userCountChanged', handleVisibilityChange);
+      document.removeEventListener('userCountChanged', handleCountChange);
       window.removeEventListener('storage', handleStorageChange);
+      clearInterval(interval);
     };
   }, []);
    
@@ -156,15 +184,6 @@ const AdminDashboard = () => {
       setLoading(false);
     }
   };
-
-  // Configurar um intervalo para verificar novos usuários periodicamente
-  useEffect(() => {
-    const interval = setInterval(() => {
-      fetchUserCount();
-    }, 30000); // Verificar a cada 30 segundos
-    
-    return () => clearInterval(interval);
-  }, []);
 
   // Abrir o modal de confirmação para excluir feedback
   const confirmDeleteFeedback = (feedback) => {
