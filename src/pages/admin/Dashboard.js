@@ -52,13 +52,66 @@ const AdminDashboard = () => {
   // Função para obter o número de usuários cadastrados
   const fetchUserCount = async () => {
     try {
+      console.log("Atualizando contagem de usuários...");
       const response = await apiService.admin.getUserCount();
-      setUserCount(response.count || 0);
+      
+      // Obter a contagem de usuários ocultos
+      const hiddenUsers = localStorage.getItem('hiddenUsers');
+      const hiddenUserIds = hiddenUsers ? JSON.parse(hiddenUsers) : [];
+      const hiddenUserCount = hiddenUserIds.length;
+      
+      console.log('Contagem total:', response.count);
+      console.log('IDs de usuários ocultos:', hiddenUserIds);
+      console.log('Quantidade de usuários ocultos:', hiddenUserCount);
+      
+      // Definir a contagem de usuários visíveis (total menos ocultos)
+      // Certificar-se de não ficar abaixo de zero
+      const visibleCount = Math.max((response.count || 0) - hiddenUserCount, 0);
+      console.log('Contagem final de usuários visíveis:', visibleCount);
+      
+      // Definir o estado atual para o número de usuários visíveis
+      setUserCount(visibleCount);
+      
+      // Atualizar o localStorage para uso em outras partes da aplicação
+      localStorage.setItem('simulatedUserCount', String(response.count || 0));
     } catch (err) {
       console.error('Erro ao buscar contagem de usuários:', err);
       setUserCount(3); // Valor padrão se ocorrer erro
     }
   };
+  
+  // Adicione estas funções ao seu componente AdminDashboard
+  useEffect(() => {
+    // Função para lidar com o evento personalizado de mudança de visibilidade
+    const handleVisibilityChange = (event) => {
+      console.log('Evento de visibilidade detectado:', event);
+      fetchUserCount();
+    };
+    
+    // Função para lidar com o evento de storage
+    const handleStorageChange = (event) => {
+      if (event.key === 'hiddenUsers') {
+        console.log('Evento de storage detectado para hiddenUsers:', event);
+        fetchUserCount();
+      }
+    };
+    
+    // Registrar os ouvintes de eventos
+    document.addEventListener('userVisibilityChanged', handleVisibilityChange);
+    document.addEventListener('userCountChanged', handleVisibilityChange);
+    window.addEventListener('storage', handleStorageChange);
+    
+    // Buscar contagem inicial
+    fetchUserCount();
+    
+    // Função de limpeza para remover os ouvintes
+    return () => {
+      document.removeEventListener('userVisibilityChanged', handleVisibilityChange);
+      document.removeEventListener('userCountChanged', handleVisibilityChange);
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, []);
+   
 
   // Função para buscar os dados do backend
   const fetchDashboardData = async () => {

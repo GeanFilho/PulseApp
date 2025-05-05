@@ -158,6 +158,7 @@ const apiService = {
       }
     },
     
+    
     // Obter a contagem de usuários
     getUserCount: async () => {
       try {
@@ -217,34 +218,192 @@ const apiService = {
       }
     },
     
-    // Excluir um usuário
-    deleteUser: async (userId) => {
+    // INÍCIO DAS NOVAS FUNÇÕES DE VISIBILIDADE
+    
+  // Atualizar visibilidade do usuário
+updateUserVisibility: async (userId, isVisible) => {
+  try {
+    const response = await api.patch(`/admin/users/${userId}/visibility`, {
+      visible: isVisible
+    });
+    
+    // Se estamos em ambiente de desenvolvimento e a API não responde como esperado,
+    // simular para testes
+    if (!response.data && process.env.NODE_ENV === 'development') {
+      // Simular a atualização de visibilidade e atualizar contagem
+      const savedHiddenUsers = localStorage.getItem('hiddenUsers');
+      let hiddenUserIds = savedHiddenUsers ? JSON.parse(savedHiddenUsers) : [];
+      
+      if (isVisible) {
+        // Remover da lista de ocultos
+        hiddenUserIds = hiddenUserIds.filter(id => id !== userId);
+      } else {
+        // Adicionar à lista de ocultos se ainda não estiver lá
+        if (!hiddenUserIds.includes(userId)) {
+          hiddenUserIds.push(userId);
+        }
+      }
+      
+      // Atualizar localStorage
+      localStorage.setItem('hiddenUsers', JSON.stringify(hiddenUserIds));
+      
+      // Atualizar contagem de usuários
+      const savedCount = localStorage.getItem('simulatedUserCount');
+      if (savedCount) {
+        const currentCount = parseInt(savedCount);
+        const newCount = isVisible ? currentCount + 1 : Math.max(currentCount - 1, 0);
+        localStorage.setItem('simulatedUserCount', newCount.toString());
+      }
+      
+      // Disparar evento personalizado
+      document.dispatchEvent(new CustomEvent('userVisibilityChanged', {
+        detail: { hiddenUsers: hiddenUserIds }
+      }));
+      
+      // Também simular um evento de storage
+      window.dispatchEvent(new StorageEvent('storage', {
+        key: 'hiddenUsers',
+        newValue: JSON.stringify(hiddenUserIds)
+      }));
+      
+      // Retornar sucesso simulado
+      return { success: true, message: `Usuário ${isVisible ? 'mostrado' : 'ocultado'} com sucesso` };
+    }
+    
+    return response.data;
+  } catch (error) {
+    console.error(`Erro ao ${isVisible ? 'mostrar' : 'ocultar'} usuário:`, error);
+    throw error.response ? error.response.data : error;
+  }
+},
+
+// Obter usuários ocultos
+getHiddenUsers: async () => {
+  try {
+    const response = await api.get('/admin/users/hidden');
+    
+    // Se estamos em desenvolvimento, retornar dados simulados
+    if ((!response.data || response.data.length === 0) && process.env.NODE_ENV === 'development') {
+      const savedHiddenUsers = localStorage.getItem('hiddenUsers');
+      return savedHiddenUsers ? JSON.parse(savedHiddenUsers) : [];
+    }
+    
+    return response.data;
+  } catch (error) {
+    console.error('Erro ao buscar usuários ocultos:', error);
+    
+    // Em desenvolvimento, retornar dados simulados em caso de erro
+    if (process.env.NODE_ENV === 'development') {
+      const savedHiddenUsers = localStorage.getItem('hiddenUsers');
+      return savedHiddenUsers ? JSON.parse(savedHiddenUsers) : [];
+    }
+    
+    throw error.response ? error.response.data : error;
+  }
+},
+
+// Obter apenas usuários visíveis
+getVisibleUsers: async () => {
+  try {
+    const response = await api.get('/admin/users/visible');
+    
+    // Se estamos em desenvolvimento e a API não responde como esperado,
+    // retornar dados simulados
+    if ((!response.data || response.data.length === 0) && process.env.NODE_ENV === 'development') {
+      // Obter todos os usuários e filtrar os ocultos
+      const allUsers = await apiService.admin.getAllUsers();
+      const savedHiddenUsers = localStorage.getItem('hiddenUsers');
+      const hiddenUserIds = savedHiddenUsers ? JSON.parse(savedHiddenUsers) : [];
+      
+      return allUsers.filter(user => !hiddenUserIds.includes(user.id));
+    }
+    
+    return response.data;
+  } catch (error) {
+    console.error('Erro ao buscar usuários visíveis:', error);
+    
+    // Em desenvolvimento, retornar dados simulados em caso de erro
+    if (process.env.NODE_ENV === 'development') {
       try {
-        const response = await api.delete(`/admin/users/${userId}`);
+        // Gerar usuários simulados e filtrar
+        const mockUsers = generateMockUsers();
+        const savedHiddenUsers = localStorage.getItem('hiddenUsers');
+        const hiddenUserIds = savedHiddenUsers ? JSON.parse(savedHiddenUsers) : [];
         
-        // Se estiver em ambiente de desenvolvimento, simular a exclusão
-        if (process.env.NODE_ENV === 'development') {
-          // Atualizar a contagem de usuários simulados
-          const savedCount = localStorage.getItem('simulatedUserCount');
-          if (savedCount) {
-            const count = Math.max(parseInt(savedCount) - 1, 0);
-            localStorage.setItem('simulatedUserCount', count.toString());
-          }
-          
-          // Simular um pequeno atraso para parecer mais realista
-          return new Promise((resolve) => {
-            setTimeout(() => {
-              resolve({ success: true, message: 'Usuário excluído com sucesso' });
-            }, 500);
-          });
+        return mockUsers.filter(user => !hiddenUserIds.includes(user.id));
+      } catch (mockError) {
+        console.error('Erro ao gerar usuários simulados:', mockError);
+        return [];
+      }
+    }
+    
+    throw error.response ? error.response.data : error;
+  }
+},  
+    // Obter usuários ocultos
+    getHiddenUsers: async () => {
+      try {
+        const response = await api.get('/admin/users/hidden');
+        
+        // Se estamos em desenvolvimento, retornar dados simulados
+        if ((!response.data || response.data.length === 0) && process.env.NODE_ENV === 'development') {
+          const savedHiddenUsers = localStorage.getItem('hiddenUsers');
+          return savedHiddenUsers ? JSON.parse(savedHiddenUsers) : [];
         }
         
         return response.data;
       } catch (error) {
-        console.error('Erro ao excluir usuário:', error);
+        console.error('Erro ao buscar usuários ocultos:', error);
+        
+        // Em desenvolvimento, retornar dados simulados em caso de erro
+        if (process.env.NODE_ENV === 'development') {
+          const savedHiddenUsers = localStorage.getItem('hiddenUsers');
+          return savedHiddenUsers ? JSON.parse(savedHiddenUsers) : [];
+        }
+        
+        throw error.response ? error.response.data : error;
+      }
+    },
+    
+    // Obter apenas usuários visíveis
+    getVisibleUsers: async () => {
+      try {
+        const response = await api.get('/admin/users/visible');
+        
+        // Se estamos em desenvolvimento e a API não responde como esperado,
+        // retornar dados simulados
+        if ((!response.data || response.data.length === 0) && process.env.NODE_ENV === 'development') {
+          // Obter todos os usuários e filtrar os ocultos
+          const allUsers = await apiService.admin.getAllUsers();
+          const savedHiddenUsers = localStorage.getItem('hiddenUsers');
+          const hiddenUserIds = savedHiddenUsers ? JSON.parse(savedHiddenUsers) : [];
+          
+          return allUsers.filter(user => !hiddenUserIds.includes(user.id));
+        }
+        
+        return response.data;
+      } catch (error) {
+        console.error('Erro ao buscar usuários visíveis:', error);
+        
+        // Em desenvolvimento, retornar dados simulados em caso de erro
+        if (process.env.NODE_ENV === 'development') {
+          try {
+            // Gerar usuários simulados e filtrar
+            const mockUsers = generateMockUsers();
+            const savedHiddenUsers = localStorage.getItem('hiddenUsers');
+            const hiddenUserIds = savedHiddenUsers ? JSON.parse(savedHiddenUsers) : [];
+            
+            return mockUsers.filter(user => !hiddenUserIds.includes(user.id));
+          } catch (mockError) {
+            console.error('Erro ao gerar usuários simulados:', mockError);
+            return [];
+          }
+        }
+        
         throw error.response ? error.response.data : error;
       }
     }
+    // FIM DAS NOVAS FUNÇÕES DE VISIBILIDADE
   }
 };
 

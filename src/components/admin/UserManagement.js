@@ -6,14 +6,23 @@ const UserManagement = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const [userToDelete, setUserToDelete] = useState(null);
-  const [deleteLoading, setDeleteLoading] = useState(false);
-  const [deleteSuccess, setDeleteSuccess] = useState(false);
-  const [deleteError, setDeleteError] = useState('');
+  const [actionConfirmOpen, setActionConfirmOpen] = useState(false);
+  const [userToAction, setUserToAction] = useState(null);
+  const [actionType, setActionType] = useState(''); // 'hide' ou 'show'
+  const [actionLoading, setActionLoading] = useState(false);
+  const [actionSuccess, setActionSuccess] = useState(false);
+  const [actionError, setActionError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
+  const [showHidden, setShowHidden] = useState(false);
+
+  // Estado para manter o controle dos usuários ocultos
+  // Carregar do localStorage ao inicializar
+  const [hiddenUsers, setHiddenUsers] = useState(() => {
+    const saved = localStorage.getItem('hiddenUsers');
+    return saved ? JSON.parse(saved) : [];
+  });
 
   // Função para buscar usuários
   const fetchUsers = async () => {
@@ -38,63 +47,160 @@ const UserManagement = () => {
     fetchUsers();
   }, []);
 
-  // Abrir o modal de confirmação para excluir usuário
-  const confirmDeleteUser = (user) => {
-    setUserToDelete(user);
-    setDeleteConfirmOpen(true);
-    setDeleteError(''); // Limpar erros anteriores
+  // Abrir o modal de confirmação para ocultar ou mostrar usuário
+  const confirmAction = (user, action) => {
+    setUserToAction(user);
+    setActionType(action);
+    setActionConfirmOpen(true);
+    setActionError(''); // Limpar erros anteriores
   };
 
-  // Cancelar a exclusão
-  const cancelDelete = () => {
-    setUserToDelete(null);
-    setDeleteConfirmOpen(false);
+  // Cancelar a ação
+  const cancelAction = () => {
+    setUserToAction(null);
+    setActionConfirmOpen(false);
+    setActionType('');
   };
 
-  // Função para excluir usuário
-  const deleteUser = async () => {
-    if (!userToDelete) return;
+  // Função para salvar os usuários ocultos no localStorage e notificar outros componentes
+  const saveHiddenUsers = (hiddenIds) => {
+    const hiddenUsersString = JSON.stringify(hiddenIds);
+    localStorage.setItem('hiddenUsers', hiddenUsersString);
+    
+    // Disparar um evento personalizado para notificar outros componentes
+    document.dispatchEvent(new CustomEvent('userVisibilityChanged', {
+      detail: { hiddenUsers: hiddenIds }
+    }));
+    
+    // Também simular um evento de storage para compatibilidade
+    window.dispatchEvent(new StorageEvent('storage', {
+      key: 'hiddenUsers',
+      newValue: hiddenUsersString
+    }));
+  };
+
+  // Função para ocultar um usuário
+  const hideUser = async () => {
+    if (!userToAction) return;
     
     try {
-      setDeleteLoading(true);
-      setDeleteError('');
+      setActionLoading(true);
+      setActionError('');
       
-      // Chamar a API para excluir o usuário
-      await apiService.admin.deleteUser(userToDelete.id);
+      // Adicionar o ID do usuário à lista de usuários ocultos
+      const updatedHiddenUsers = [...hiddenUsers, userToAction.id];
+      setHiddenUsers(updatedHiddenUsers);
       
-      // Atualizar a lista de usuários (remover o usuário excluído)
-      setUsers(users.filter(user => user.id !== userToDelete.id));
+      // Salvar no localStorage para persistir entre recarregamentos e notificar outros componentes
+      saveHiddenUsers(updatedHiddenUsers);
+      
+      // Atualizar no backend
+      await apiService.admin.updateUserVisibility(userToAction.id, false);
+      
+      // Atualizar a contagem de usuários
+      updateUserCount(-1);
       
       // Fechar o modal de confirmação
-      setDeleteConfirmOpen(false);
-      setUserToDelete(null);
-      setDeleteSuccess(true);
+      setActionConfirmOpen(false);
+      setUserToAction(null);
+      setActionSuccess(true);
       
-      // Limpar a mensagem de sucesso após alguns segundos
+      // Exibir mensagem de sucesso por 2 segundos
       setTimeout(() => {
-        setDeleteSuccess(false);
-      }, 3000);
+        setActionSuccess(false);
+      }, 2000);
       
     } catch (err) {
-      console.error('Erro ao excluir usuário:', err);
-      setDeleteError('Ocorreu um erro ao excluir o usuário. Por favor, tente novamente.');
+      console.error('Erro ao ocultar usuário:', err);
+      setActionError('Ocorreu um erro ao ocultar o usuário. Por favor, tente novamente.');
     } finally {
-      setDeleteLoading(false);
+      setActionLoading(false);
     }
   };
 
-  // Filtrar usuários com base no termo de pesquisa
-  const filteredUsers = users.filter(user => 
-    user.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.department?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Função para mostrar um usuário oculto
+  const showUser = async () => {
+    if (!userToAction) return;
+    
+    try {
+      setActionLoading(true);
+      setActionError('');
+      
+      // Remover o ID do usuário da lista de usuários ocultos
+      const updatedHiddenUsers = hiddenUsers.filter(id => id !== userToAction.id);
+      setHiddenUsers(updatedHiddenUsers);
+      
+      // Salvar no localStorage para persistir entre recarregamentos e notificar outros componentes
+      saveHiddenUsers(updatedHiddenUsers);
+      
+      // Atualizar no backend
+      await apiService.admin.updateUserVisibility(userToAction.id, true);
+      
+      // Atualizar a contagem de usuários
+      updateUserCount(1);
+      
+      // Fechar o modal de confirmação
+      setActionConfirmOpen(false);
+      setUserToAction(null);
+      setActionSuccess(true);
+      
+      // Exibir mensagem de sucesso por 2 segundos
+      setTimeout(() => {
+        setActionSuccess(false);
+      }, 2000);
+      
+    } catch (err) {
+      console.error('Erro ao mostrar usuário:', err);
+      setActionError('Ocorreu um erro ao mostrar o usuário. Por favor, tente novamente.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // Função para atualizar a contagem de usuários (simula a API)
+  const updateUserCount = (change) => {
+    // Em um ambiente real, esta função seria substituída por uma chamada 
+    // à API para atualizar a contagem no servidor
+    const savedCount = localStorage.getItem('simulatedUserCount');
+    if (savedCount) {
+      const currentCount = parseInt(savedCount);
+      const newCount = Math.max(currentCount + change, 0); // Garantir que não vá abaixo de 0
+      localStorage.setItem('simulatedUserCount', newCount.toString());
+      
+      // Notificar mudança na contagem
+      document.dispatchEvent(new CustomEvent('userCountChanged', {
+        detail: { count: newCount }
+      }));
+    }
+  };
+
+  // Filtrar usuários com base no termo de pesquisa e no estado de visibilidade
+  const filteredUsers = users.filter(user => {
+    // Primeiro filtrar pelo termo de pesquisa
+    const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                        user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                        user.department?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    // Depois filtrar pelo estado de visibilidade
+    if (showHidden) {
+      // Se estamos mostrando ocultos, então incluir todos os que passaram pelo filtro de pesquisa
+      return matchesSearch;
+    } else {
+      // Se não estamos mostrando ocultos, então incluir apenas os visíveis que passaram pelo filtro de pesquisa
+      return matchesSearch && !hiddenUsers.includes(user.id);
+    }
+  });
 
   // Paginação
   const indexOfLastUser = currentPage * itemsPerPage;
   const indexOfFirstUser = indexOfLastUser - itemsPerPage;
   const currentUsers = filteredUsers.slice(indexOfFirstUser, indexOfLastUser);
   const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
+
+  // Verificar se um usuário está oculto
+  const isUserHidden = (userId) => {
+    return hiddenUsers.includes(userId);
+  };
 
   // Estilização
   const styles = {
@@ -121,6 +227,12 @@ const UserManagement = () => {
       display: 'flex',
       alignItems: 'center',
       gap: '12px',
+      marginBottom: '16px'
+    },
+    controlsContainer: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
       marginBottom: '24px'
     },
     searchInput: {
@@ -129,6 +241,29 @@ const UserManagement = () => {
       borderRadius: '8px',
       border: '1px solid #d1d5db',
       fontSize: '14px'
+    },
+    toggleContainer: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: '8px'
+    },
+    toggleLabel: {
+      fontSize: '14px',
+      color: '#4b5563'
+    },
+    toggleButton: {
+      padding: '8px 12px',
+      backgroundColor: '#f3f4f6',
+      border: '1px solid #d1d5db',
+      borderRadius: '8px',
+      cursor: 'pointer',
+      fontSize: '14px',
+      color: '#4b5563'
+    },
+    toggleButtonActive: {
+      backgroundColor: '#e0e7ff',
+      borderColor: '#4f46e5',
+      color: '#4f46e5'
     },
     table: {
       width: '100%',
@@ -149,6 +284,14 @@ const UserManagement = () => {
       color: '#4b5563',
       borderBottom: '1px solid #e5e7eb'
     },
+    tableCellHidden: {
+      padding: '12px 16px',
+      fontSize: '14px',
+      color: '#9ca3af',
+      backgroundColor: '#f9fafb',
+      borderBottom: '1px solid #e5e7eb',
+      fontStyle: 'italic'
+    },
     adminBadge: {
       backgroundColor: '#dbeafe',
       color: '#1e40af',
@@ -160,6 +303,14 @@ const UserManagement = () => {
     employeeBadge: {
       backgroundColor: '#e0e7ff',
       color: '#4338ca',
+      padding: '2px 8px',
+      borderRadius: '20px',
+      fontSize: '12px',
+      fontWeight: '500'
+    },
+    hiddenBadge: {
+      backgroundColor: '#fee2e2',
+      color: '#b91c1c',
       padding: '2px 8px',
       borderRadius: '20px',
       fontSize: '12px',
@@ -178,9 +329,13 @@ const UserManagement = () => {
       color: '#1e40af',
       marginRight: '8px'
     },
-    deleteButton: {
+    hideButton: {
       backgroundColor: '#fee2e2',
       color: '#b91c1c'
+    },
+    showButton: {
+      backgroundColor: '#d1fae5',
+      color: '#065f46'
     },
     loadingContainer: {
       textAlign: 'center',
@@ -297,55 +452,60 @@ const UserManagement = () => {
       color: '#4b5563',
       cursor: 'pointer'
     },
-    confirmDeleteBtn: {
+    confirmActionBtn: (actionType) => ({
       padding: '8px 16px',
       borderRadius: '8px',
-      backgroundColor: '#ef4444',
+      backgroundColor: actionType === 'hide' ? '#ef4444' : '#10b981',
       border: 'none',
       color: 'white',
       cursor: 'pointer'
-    }
+    })
   };
 
-  // Modal de confirmação de exclusão
-  const DeleteConfirmationModal = () => {
-    if (!deleteConfirmOpen) return null;
+  // Modal de confirmação de ação
+  const ActionConfirmationModal = () => {
+    if (!actionConfirmOpen) return null;
+    
+    const isHideAction = actionType === 'hide';
+    const actionText = isHideAction ? 'ocultar' : 'mostrar';
+    const buttonText = isHideAction ? 'Ocultar Usuário' : 'Mostrar Usuário';
+    const actionFunction = isHideAction ? hideUser : showUser;
     
     return (
       <div style={styles.modalOverlay}>
         <div style={styles.modalContent}>
-          <h3 style={styles.modalTitle}>Confirmar exclusão</h3>
+          <h3 style={styles.modalTitle}>Confirmar ação</h3>
           <p style={styles.modalText}>
-            Tem certeza que deseja excluir o usuário <strong>{userToDelete?.name}</strong>?
-            Esta ação não pode ser desfeita.
+            Tem certeza que deseja {actionText} o usuário <strong>{userToAction?.name}</strong>?
+            {isHideAction && ' Este usuário não aparecerá mais nas listagens padrão.'}
           </p>
           
-          {userToDelete?.role === 'admin' && (
+          {userToAction?.role === 'admin' && isHideAction && (
             <p style={styles.modalText}>
               <span style={styles.modalHighlight}>Atenção:</span> Este usuário possui privilégios de administrador!
             </p>
           )}
           
-          {deleteError && (
+          {actionError && (
             <div style={styles.modalError}>
-              {deleteError}
+              {actionError}
             </div>
           )}
           
           <div style={styles.modalButtons}>
             <button 
               style={styles.cancelModalBtn} 
-              onClick={cancelDelete}
-              disabled={deleteLoading}
+              onClick={cancelAction}
+              disabled={actionLoading}
             >
               Cancelar
             </button>
             <button 
-              style={styles.confirmDeleteBtn} 
-              onClick={deleteUser}
-              disabled={deleteLoading}
+              style={styles.confirmActionBtn(actionType)} 
+              onClick={actionFunction}
+              disabled={actionLoading}
             >
-              {deleteLoading ? 'Excluindo...' : 'Excluir Usuário'}
+              {actionLoading ? 'Processando...' : buttonText}
             </button>
           </div>
         </div>
@@ -396,20 +556,35 @@ const UserManagement = () => {
         </div>
       )}
       
-      {deleteSuccess && (
+      {actionSuccess && (
         <div style={styles.successContainer}>
-          <p>Usuário excluído com sucesso!</p>
+          <p>Operação realizada com sucesso!</p>
         </div>
       )}
       
-      <div style={styles.searchBox}>
-        <input
-          type="text"
-          placeholder="Buscar por nome, email ou departamento..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          style={styles.searchInput}
-        />
+      <div style={styles.controlsContainer}>
+        <div style={styles.searchBox}>
+          <input
+            type="text"
+            placeholder="Buscar por nome, email ou departamento..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            style={styles.searchInput}
+          />
+        </div>
+        
+        <div style={styles.toggleContainer}>
+          <span style={styles.toggleLabel}>Mostrar usuários ocultos:</span>
+          <button
+            style={{
+              ...styles.toggleButton,
+              ...(showHidden ? styles.toggleButtonActive : {})
+            }}
+            onClick={() => setShowHidden(!showHidden)}
+          >
+            {showHidden ? 'Sim' : 'Não'}
+          </button>
+        </div>
       </div>
       
       {currentUsers.length === 0 ? (
@@ -428,36 +603,68 @@ const UserManagement = () => {
                   <th style={styles.tableHeader}>Email</th>
                   <th style={styles.tableHeader}>Departamento</th>
                   <th style={styles.tableHeader}>Função</th>
+                  <th style={styles.tableHeader}>Status</th>
                   <th style={styles.tableHeader}>Ações</th>
                 </tr>
               </thead>
               <tbody>
-                {currentUsers.map((user) => (
-                  <tr key={user.id}>
-                    <td style={styles.tableCell}>{user.name}</td>
-                    <td style={styles.tableCell}>{user.email}</td>
-                    <td style={styles.tableCell}>{user.department}</td>
-                    <td style={styles.tableCell}>
-                      <span style={user.role === 'admin' ? styles.adminBadge : styles.employeeBadge}>
-                        {user.role === 'admin' ? 'Administrador' : 'Funcionário'}
-                      </span>
-                    </td>
-                    <td style={styles.tableCell}>
-                      <button 
-                        style={{...styles.actionButton, ...styles.editButton}}
-                        onClick={() => alert('Funcionalidade de edição não implementada')}
-                      >
-                        Editar
-                      </button>
-                      <button 
-                        style={{...styles.actionButton, ...styles.deleteButton}}
-                        onClick={() => confirmDeleteUser(user)}
-                      >
-                        Excluir
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {currentUsers.map((user) => {
+                  const userHidden = isUserHidden(user.id);
+                  return (
+                    <tr key={user.id}>
+                      <td style={userHidden ? styles.tableCellHidden : styles.tableCell}>{user.name}</td>
+                      <td style={userHidden ? styles.tableCellHidden : styles.tableCell}>{user.email}</td>
+                      <td style={userHidden ? styles.tableCellHidden : styles.tableCell}>{user.department}</td>
+                      <td style={userHidden ? styles.tableCellHidden : styles.tableCell}>
+                        <span style={user.role === 'admin' ? styles.adminBadge : styles.employeeBadge}>
+                          {user.role === 'admin' ? 'Administrador' : 'Funcionário'}
+                        </span>
+                      </td>
+                      <td style={userHidden ? styles.tableCellHidden : styles.tableCell}>
+                        {userHidden && (
+                          <span style={styles.hiddenBadge}>
+                            Oculto
+                          </span>
+                        )}
+                        {!userHidden && (
+                          <span style={{
+                            backgroundColor: '#d1fae5',
+                            color: '#065f46',
+                            padding: '2px 8px',
+                            borderRadius: '20px',
+                            fontSize: '12px',
+                            fontWeight: '500'
+                          }}>
+                            Visível
+                          </span>
+                        )}
+                      </td>
+                      <td style={userHidden ? styles.tableCellHidden : styles.tableCell}>
+                        <button 
+                          style={{...styles.actionButton, ...styles.editButton}}
+                          onClick={() => alert('Funcionalidade de edição não implementada')}
+                        >
+                          Editar
+                        </button>
+                        {!userHidden ? (
+                          <button 
+                            style={{...styles.actionButton, ...styles.hideButton}}
+                            onClick={() => confirmAction(user, 'hide')}
+                          >
+                            Ocultar
+                          </button>
+                        ) : (
+                          <button 
+                            style={{...styles.actionButton, ...styles.showButton}}
+                            onClick={() => confirmAction(user, 'show')}
+                          >
+                            Mostrar
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -510,8 +717,8 @@ const UserManagement = () => {
         </>
       )}
       
-      {/* Modal de confirmação de exclusão */}
-      <DeleteConfirmationModal />
+      {/* Modal de confirmação de ação */}
+      <ActionConfirmationModal />
     </div>
   );
 };
