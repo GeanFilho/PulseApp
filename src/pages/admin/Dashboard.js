@@ -1,7 +1,11 @@
+// src/pages/admin/Dashboard.js
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import Navbar from '../../components/Navbar';
 import ExportReport from '../../components/ExportReport';
+import UserManagement from '../../components/admin/UserManagement';
+import feedbackService from '../../services/feedbackService';
+import apiService from '../../services/apiService';
 
 const AdminDashboard = () => {
   const { currentUser } = useAuth();
@@ -14,11 +18,21 @@ const AdminDashboard = () => {
   const [feedbackToDelete, setFeedbackToDelete] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteSuccess, setDeleteSuccess] = useState(false);
+  const [userCount, setUserCount] = useState(0);
+  const [trendData, setTrendData] = useState({
+    direction: 'up', // 'up', 'down', or 'stable'
+    percentage: 5,
+    weeklyValues: [7.2, 6.8, 7.0, 7.4, 7.6, 7.5, 7.8]
+  });
   
-  // Estado para armazenar os dados reais do dashboard
+  // Estado para a guia ativa
+  const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard' ou 'users'
+  
+  // Estado para armazenar os dados do dashboard
   const [dashboardData, setDashboardData] = useState({
     stats: {
       responseRate: 0,
+      productivityRate: 0,
       supportYesPercentage: 0,
       supportPartialPercentage: 0,
       supportNoPercentage: 0,
@@ -28,49 +42,59 @@ const AdminDashboard = () => {
     recentFeedbacks: []
   });
 
+  // Estado para manter o controle dos feedbacks excluídos visualmente
+  // Carregar do localStorage ao inicializar
+  const [hiddenFeedbacks, setHiddenFeedbacks] = useState(() => {
+    const saved = localStorage.getItem('hiddenFeedbacks');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  // Função para obter o número de usuários cadastrados
+  const fetchUserCount = async () => {
+    try {
+      const response = await apiService.admin.getUserCount();
+      setUserCount(response.count || 0);
+    } catch (err) {
+      console.error('Erro ao buscar contagem de usuários:', err);
+      setUserCount(3); // Valor padrão se ocorrer erro
+    }
+  };
+
   // Função para buscar os dados do backend
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
       
-      // Simular busca de dados - substitua pela sua API real
-      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
-      const token = localStorage.getItem('token');
+      // Buscar estatísticas e feedbacks usando o feedbackService
+      const stats = await feedbackService.getDashboardStats(period);
+      const recentFeedbacks = await feedbackService.getRecentFeedbacks(5);
+      const trendDataResponse = await feedbackService.getFeedbackTrends(period);
       
-      const headers = {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      };
-      
-      // Buscar estatísticas
-      const statsResponse = await fetch(`${API_URL}/admin/stats?period=${period}`, {
-        method: 'GET',
-        headers
-      });
-      
-      if (!statsResponse.ok) {
-        throw new Error('Erro ao buscar estatísticas');
+      // Atualizar dados de tendência
+      if (trendDataResponse) {
+        setTrendData(trendDataResponse);
       }
       
-      const stats = await statsResponse.json();
+      // Calcular a taxa de produtividade (média dos valores 'performance')
+      const productivityValues = recentFeedbacks
+        .map(feedback => feedback.performance || 0)
+        .filter(value => value > 0);
       
-      // Buscar feedbacks recentes
-      const feedbacksResponse = await fetch(`${API_URL}/admin/feedbacks/recent?limit=5`, {
-        method: 'GET',
-        headers
-      });
+      const averageProductivity = productivityValues.length > 0
+        ? productivityValues.reduce((sum, value) => sum + value, 0) / productivityValues.length
+        : 0;
       
-      if (!feedbacksResponse.ok) {
-        throw new Error('Erro ao buscar feedbacks recentes');
-      }
-      
-      const recentFeedbacks = await feedbacksResponse.json();
-      
-      // Atualizar o estado com os dados reais
+      // Atualizar o estado com os dados reais e a taxa de produtividade calculada
       setDashboardData({
-        stats,
+        stats: {
+          ...stats,
+          productivityRate: (averageProductivity * 10).toFixed(0) // Convertendo para percentual
+        },
         recentFeedbacks
       });
+      
+      // Também buscar a contagem de usuários
+      await fetchUserCount();
       
       setLoading(false);
     } catch (err) {
@@ -79,6 +103,15 @@ const AdminDashboard = () => {
       setLoading(false);
     }
   };
+
+  // Configurar um intervalo para verificar novos usuários periodicamente
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchUserCount();
+    }, 30000); // Verificar a cada 30 segundos
+    
+    return () => clearInterval(interval);
+  }, []);
 
   // Abrir o modal de confirmação para excluir feedback
   const confirmDeleteFeedback = (feedback) => {
@@ -93,31 +126,20 @@ const AdminDashboard = () => {
     setDeleteConfirmOpen(false);
   };
 
-  // Excluir feedback
-  const deleteFeedback = async () => {
+  // Função para ocultar feedback da visualização (sem excluir do banco de dados)
+  const hideFeedback = async () => {
     if (!feedbackToDelete) return;
     
     try {
       setDeleteLoading(true);
       setDeleteError('');
       
-      console.log('Tentando excluir feedback ID:', feedbackToDelete.id);
+      // Adicionar o ID do feedback à lista de feedbacks ocultos
+      const updatedHiddenFeedbacks = [...hiddenFeedbacks, feedbackToDelete.id];
+      setHiddenFeedbacks(updatedHiddenFeedbacks);
       
-      // Chamar API para excluir o feedback
-      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
-      const token = localStorage.getItem('token');
-      
-      const response = await fetch(`${API_URL}/feedback/${feedbackToDelete.id}`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Erro ao excluir: ${response.status} ${response.statusText}`);
-      }
+      // Salvar no localStorage para persistir entre recarregamentos
+      localStorage.setItem('hiddenFeedbacks', JSON.stringify(updatedHiddenFeedbacks));
       
       // Fechar o modal de confirmação
       setDeleteConfirmOpen(false);
@@ -129,21 +151,59 @@ const AdminDashboard = () => {
         setDeleteSuccess(false);
       }, 2000);
       
-      // Atualizar os dados para refletir a exclusão
-      await fetchDashboardData();
-      
     } catch (err) {
-      console.error('Erro ao excluir feedback:', err);
-      setDeleteError('Ocorreu um erro ao excluir o feedback. Por favor, tente novamente.');
+      console.error('Erro ao ocultar feedback:', err);
+      setDeleteError('Ocorreu um erro ao ocultar o feedback. Por favor, tente novamente.');
     } finally {
       setDeleteLoading(false);
     }
   };
 
+  // Função para restaurar todos os feedbacks ocultos
+  const restoreAllFeedbacks = () => {
+    setHiddenFeedbacks([]);
+    localStorage.removeItem('hiddenFeedbacks');
+    // Mostrar mensagem de sucesso
+    setDeleteSuccess(true);
+    setTimeout(() => {
+      setDeleteSuccess(false);
+    }, 2000);
+  };
+
   // Buscar dados ao carregar o componente ou quando o período mudar
   useEffect(() => {
-    fetchDashboardData();
-  }, [period]);
+    if (activeTab === 'dashboard') {
+      fetchDashboardData();
+    }
+  }, [period, activeTab]);
+
+  // Filtrar feedbacks ocultos
+  const visibleFeedbacks = dashboardData.recentFeedbacks.filter(
+    feedback => !hiddenFeedbacks.includes(feedback.id)
+  );
+
+  // Determinar a cor e o ícone da tendência
+  const getTrendColor = () => {
+    switch (trendData.direction) {
+      case 'up':
+        return '#10b981'; // Verde
+      case 'down':
+        return '#ef4444'; // Vermelho
+      default:
+        return '#6b7280'; // Cinza
+    }
+  };
+
+  const getTrendIcon = () => {
+    switch (trendData.direction) {
+      case 'up':
+        return '↑';
+      case 'down':
+        return '↓';
+      default:
+        return '→';
+    }
+  };
 
   // Estilos para o dashboard
   const styles = {
@@ -171,6 +231,24 @@ const AdminDashboard = () => {
       color: '#111827',
       margin: 0
     },
+    tabs: {
+      display: 'flex',
+      borderBottom: '1px solid #e5e7eb',
+      marginBottom: '24px'
+    },
+    tab: {
+      padding: '12px 16px',
+      fontSize: '16px',
+      fontWeight: '500',
+      color: '#6b7280',
+      cursor: 'pointer',
+      position: 'relative',
+      borderBottom: '2px solid transparent'
+    },
+    activeTab: {
+      color: '#4f46e5',
+      borderBottom: '2px solid #4f46e5'
+    },
     controls: {
       display: 'flex',
       gap: '12px'
@@ -187,6 +265,15 @@ const AdminDashboard = () => {
       padding: '8px 16px',
       borderRadius: '8px',
       cursor: 'pointer'
+    },
+    restoreButton: {
+      backgroundColor: '#4f46e5',
+      color: 'white',
+      border: 'none',
+      padding: '8px 16px',
+      borderRadius: '8px',
+      cursor: 'pointer',
+      marginLeft: '8px'
     },
     dashboard: {
       backgroundColor: 'white',
@@ -235,26 +322,46 @@ const AdminDashboard = () => {
       fontWeight: 'bold',
       margin: 0
     },
-    statTrend: {
+    statTrend: (color = '#10b981') => ({
       display: 'flex',
       alignItems: 'center',
       fontSize: '14px',
       marginTop: '8px',
-      color: '#10b981'
-    },
+      color: color
+    }),
     statDetail: {
       fontSize: '14px',
       color: '#6b7280',
       marginTop: '8px'
     },
+    trendChart: {
+      display: 'flex',
+      alignItems: 'flex-end',
+      height: '60px',
+      gap: '2px',
+      marginTop: '8px'
+    },
+    trendBar: (value, max, index, isLatest) => ({
+      flex: 1,
+      height: `${Math.max((value / 10) * 100, 15)}%`,
+      backgroundColor: isLatest ? '#4f46e5' : '#a5b4fc',
+      borderRadius: '2px',
+      transition: 'height 0.3s ease'
+    }),
     feedbacksSection: {
       marginTop: '32px'
+    },
+    feedbacksHeader: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: '16px'
     },
     feedbacksTitle: {
       fontSize: '18px',
       fontWeight: 'bold',
-      marginBottom: '16px',
-      color: '#111827'
+      color: '#111827',
+      margin: 0
     },
     feedbacksList: {
       display: 'flex',
@@ -434,8 +541,7 @@ const AdminDashboard = () => {
         <div style={styles.modalContent}>
           <h3 style={styles.modalTitle}>Confirmar exclusão</h3>
           <p style={styles.modalText}>
-            Tem certeza que deseja excluir o feedback de <strong>{feedbackToDelete?.name}</strong>? 
-            Esta ação não pode ser desfeita.
+            Tem certeza que deseja ocultar o feedback de <strong>{feedbackToDelete?.name}</strong>?
           </p>
           
           {deleteError && (
@@ -454,10 +560,10 @@ const AdminDashboard = () => {
             </button>
             <button 
               style={styles.confirmDeleteBtn} 
-              onClick={deleteFeedback}
+              onClick={hideFeedback}
               disabled={deleteLoading}
             >
-              {deleteLoading ? 'Excluindo...' : 'Excluir Feedback'}
+              {deleteLoading ? 'Processando...' : 'Ocultar Feedback'}
             </button>
           </div>
         </div>
@@ -465,25 +571,143 @@ const AdminDashboard = () => {
     );
   };
 
-  if (loading) {
+  // Conteúdo do Dashboard
+  const renderDashboardContent = () => {
+    if (loading) {
+      return (
+        <div style={styles.loadingContainer}>
+          <div style={styles.loadingSpinner}></div>
+          <p>Carregando dados do dashboard...</p>
+          <style>{`
+            @keyframes spin {
+              0% { transform: rotate(0deg); }
+              100% { transform: rotate(360deg); }
+            }
+          `}</style>
+        </div>
+      );
+    }
+
     return (
-      <div style={styles.container}>
-        <Navbar />
-        <div style={styles.content}>
-          <div style={styles.loadingContainer}>
-            <div style={styles.loadingSpinner}></div>
-            <p>Carregando dados do dashboard...</p>
-            <style>{`
-              @keyframes spin {
-                0% { transform: rotate(0deg); }
-                100% { transform: rotate(360deg); }
-              }
-            `}</style>
+      <div style={styles.dashboard}>
+        <div style={styles.dashboardHeader}>
+          <h2 style={styles.dashboardTitle}>Painel de Análises</h2>
+          <div style={styles.controls}>
+            <select 
+              style={styles.select} 
+              value={period}
+              onChange={(e) => setPeriod(e.target.value)}
+            >
+              <option value="last-week">Última semana</option>
+              <option value="last-month">Último mês</option>
+              <option value="last-quarter">Último trimestre</option>
+              <option value="year-to-date">Desde o início do ano</option>
+            </select>
+            <button 
+              style={styles.exportButton}
+              onClick={() => setExportModalOpen(true)}
+            >
+              Exportar
+            </button>
+            {hiddenFeedbacks.length > 0 && (
+              <button 
+                style={styles.restoreButton}
+                onClick={restoreAllFeedbacks}
+              >
+                Restaurar
+              </button>
+            )}
           </div>
+        </div>
+
+        {/* Cards de estatísticas */}
+        <div style={styles.statsGrid}>
+          {/* Card 1: Usuários Cadastrados */}
+          <div style={styles.statCard(0)}>
+            <h3 style={styles.statTitle}>Usuários Cadastrados</h3>
+            <p style={styles.statValue}>{userCount}</p>
+            <div style={styles.statTrend()}>
+              <span style={{ marginRight: '4px' }}>↑</span>
+              Atualizado em tempo real
+            </div>
+          </div>
+          
+          {/* Card 2: Taxa de Produtividade */}
+          <div style={styles.statCard(1)}>
+            <h3 style={styles.statTitle}>Taxa de Produtividade</h3>
+            <p style={styles.statValue}>{dashboardData.stats.productivityRate}%</p>
+            <div style={styles.statTrend()}>
+              <span style={{ marginRight: '4px' }}>↑</span>
+              Baseado nos feedbacks recentes
+            </div>
+          </div>
+          
+          {/* Card 3: Tendência de Motivação */}
+          <div style={styles.statCard(2)}>
+            <h3 style={styles.statTitle}>Tendência de Motivação</h3>
+            <div style={styles.trendChart}>
+              {trendData.weeklyValues.map((value, index) => (
+                <div 
+                  key={index} 
+                  style={styles.trendBar(
+                    value, 
+                    10, 
+                    index, 
+                    index === trendData.weeklyValues.length - 1
+                  )}
+                />
+              ))}
+            </div>
+            <div style={styles.statTrend(getTrendColor())}>
+              <span style={{ marginRight: '4px' }}>{getTrendIcon()}</span>
+              {trendData.percentage}% nas últimas semanas
+            </div>
+          </div>
+        </div>
+
+        {/* Feedback recentes */}
+        <div style={styles.feedbacksSection}>
+          <div style={styles.feedbacksHeader}>
+            <h3 style={styles.feedbacksTitle}>Feedbacks Recentes</h3>
+          </div>
+          
+          {visibleFeedbacks.length === 0 ? (
+            <div style={styles.emptyState}>
+              <p>Nenhum feedback encontrado para o período selecionado.</p>
+            </div>
+          ) : (
+            <div style={styles.feedbacksList}>
+              {visibleFeedbacks.map((feedback) => (
+                <div key={feedback.id} style={styles.feedbackItem}>
+                  <div style={styles.feedbackHeader}>
+                    <span style={styles.feedbackAuthor}>{feedback.name}</span>
+                    <span style={styles.feedbackDept}>{feedback.dept}</span>
+                    <button 
+                      style={styles.deleteButton}
+                      onClick={() => confirmDeleteFeedback(feedback)}
+                    >
+                      Excluir
+                    </button>
+                  </div>
+                  <div style={styles.feedbackStats}>
+                    <span style={styles.feedbackStat}>Motivação: {feedback.motivation}/10</span>
+                    <span style={styles.feedbackStat}>Carga: {feedback.workload}/10</span>
+                    <span style={styles.feedbackStat}>Rendimento: {feedback.performance}/10</span>
+                    <span style={styles.feedbackStat}>Apoio: {feedback.support}</span>
+                  </div>
+                  {feedback.improvementSuggestion && (
+                    <div style={styles.feedbackSuggestion}>
+                      <strong>Sugestão:</strong> {feedback.improvementSuggestion}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     );
-  }
+  };
 
   return (
     <div style={styles.container}>
@@ -492,6 +716,28 @@ const AdminDashboard = () => {
       <div style={styles.content}>
         <div style={styles.header}>
           <h1 style={styles.title}>Visão Geral da Equipe</h1>
+        </div>
+
+        {/* Abas de navegação */}
+        <div style={styles.tabs}>
+          <div 
+            style={{
+              ...styles.tab,
+              ...(activeTab === 'dashboard' ? styles.activeTab : {})
+            }}
+            onClick={() => setActiveTab('dashboard')}
+          >
+            Dashboard
+          </div>
+          <div 
+            style={{
+              ...styles.tab,
+              ...(activeTab === 'users' ? styles.activeTab : {})
+            }}
+            onClick={() => setActiveTab('users')}
+          >
+            Usuários
+          </div>
         </div>
 
         {error && (
@@ -508,102 +754,13 @@ const AdminDashboard = () => {
         
         {deleteSuccess && (
           <div style={styles.successContainer}>
-            <p>Feedback excluído com sucesso!</p>
+            <p>Operação realizada com sucesso!</p>
           </div>
         )}
 
-        <div style={styles.dashboard}>
-          <div style={styles.dashboardHeader}>
-            <h2 style={styles.dashboardTitle}>Painel de Análises</h2>
-            <div style={styles.controls}>
-              <select 
-                style={styles.select} 
-                value={period}
-                onChange={(e) => setPeriod(e.target.value)}
-              >
-                <option value="last-week">Última semana</option>
-                <option value="last-month">Último mês</option>
-                <option value="last-quarter">Último trimestre</option>
-                <option value="year-to-date">Desde o início do ano</option>
-              </select>
-              <button 
-                style={styles.exportButton}
-                onClick={() => setExportModalOpen(true)}
-              >
-                Exportar
-              </button>
-            </div>
-          </div>
-
-          {/* Estatísticas - apenas as 3 solicitadas */}
-          <div style={styles.statsGrid}>
-            <div style={styles.statCard(0)}>
-              <h3 style={styles.statTitle}>Taxa de Resposta</h3>
-              <p style={styles.statValue}>{dashboardData.stats.responseRate}%</p>
-              <div style={styles.statTrend}>
-                <span style={{ marginRight: '4px' }}>↑</span>
-                +5% em relação à semana anterior
-              </div>
-            </div>
-            
-            <div style={styles.statCard(1)}>
-              <h3 style={styles.statTitle}>Apoio da Equipe</h3>
-              <p style={styles.statValue}>{dashboardData.stats.supportYesPercentage}%</p>
-              <div style={styles.statDetail}>
-                Sim: {dashboardData.stats.supportYesPercentage}% | 
-                Em partes: {dashboardData.stats.supportPartialPercentage}% | 
-                Não: {dashboardData.stats.supportNoPercentage}%
-              </div>
-            </div>
-            
-            <div style={styles.statCard(2)}>
-              <h3 style={styles.statTitle}>Pendentes</h3>
-              <p style={styles.statValue}>{dashboardData.stats.pendingFeedbacks}</p>
-              <div style={styles.statDetail}>
-                De um total de {dashboardData.stats.totalEmployees} funcionários
-              </div>
-            </div>
-          </div>
-
-          {/* Feedback recentes */}
-          <div style={styles.feedbacksSection}>
-            <h3 style={styles.feedbacksTitle}>Feedbacks Recentes</h3>
-            
-            {dashboardData.recentFeedbacks.length === 0 ? (
-              <div style={styles.emptyState}>
-                <p>Nenhum feedback encontrado para o período selecionado.</p>
-              </div>
-            ) : (
-              <div style={styles.feedbacksList}>
-                {dashboardData.recentFeedbacks.map((feedback) => (
-                  <div key={feedback.id} style={styles.feedbackItem}>
-                    <div style={styles.feedbackHeader}>
-                      <span style={styles.feedbackAuthor}>{feedback.name}</span>
-                      <span style={styles.feedbackDept}>{feedback.dept}</span>
-                      <button 
-                        style={styles.deleteButton}
-                        onClick={() => confirmDeleteFeedback(feedback)}
-                      >
-                        Excluir
-                      </button>
-                    </div>
-                    <div style={styles.feedbackStats}>
-                      <span style={styles.feedbackStat}>Motivação: {feedback.motivation}/10</span>
-                      <span style={styles.feedbackStat}>Carga: {feedback.workload}/10</span>
-                      <span style={styles.feedbackStat}>Rendimento: {feedback.performance}/10</span>
-                      <span style={styles.feedbackStat}>Apoio: {feedback.support}</span>
-                    </div>
-                    {feedback.improvementSuggestion && (
-                      <div style={styles.feedbackSuggestion}>
-                        <strong>Sugestão:</strong> {feedback.improvementSuggestion}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
+        {/* Renderizar conteúdo com base na aba selecionada */}
+        {activeTab === 'dashboard' && renderDashboardContent()}
+        {activeTab === 'users' && <UserManagement />}
       </div>
 
       {/* Modal para confirmação de exclusão */}

@@ -50,7 +50,7 @@ const feedbackService = {
   },
   
   // Obter feedback mais recente do usuário
-  getLatestFeedback: async () => {
+  getLatestFeedback: async (userId) => {
     try {
       const response = await api.get('/feedback/latest');
       return response.data;
@@ -64,9 +64,44 @@ const feedbackService = {
   getDashboardStats: async (period = 'last-week') => {
     try {
       const response = await api.get(`/admin/stats?period=${period}`);
+      
+      // Se estamos em desenvolvimento e não há resposta da API, gerar dados de demonstração
+      if (!response.data && process.env.NODE_ENV === 'development') {
+        return generateMockStats(period);
+      }
+      
       return response.data;
     } catch (error) {
       console.error('Erro ao buscar estatísticas do dashboard:', error);
+      
+      // Em caso de erro em ambiente de desenvolvimento, gerar dados de demonstração
+      if (process.env.NODE_ENV === 'development') {
+        return generateMockStats(period);
+      }
+      
+      throw error.response ? error.response.data : error;
+    }
+  },
+  
+  // Para administradores: obter tendências de feedback
+  getFeedbackTrends: async (period = 'last-week') => {
+    try {
+      const response = await api.get(`/admin/trends?period=${period}`);
+      
+      // Se estamos em desenvolvimento e não há resposta da API, gerar dados de demonstração
+      if (!response.data && process.env.NODE_ENV === 'development') {
+        return generateMockTrends(period);
+      }
+      
+      return response.data;
+    } catch (error) {
+      console.error('Erro ao buscar tendências de feedback:', error);
+      
+      // Em caso de erro em ambiente de desenvolvimento, gerar dados de demonstração
+      if (process.env.NODE_ENV === 'development') {
+        return generateMockTrends(period);
+      }
+      
       throw error.response ? error.response.data : error;
     }
   },
@@ -75,9 +110,21 @@ const feedbackService = {
   getRecentFeedbacks: async (limit = 5) => {
     try {
       const response = await api.get(`/admin/feedbacks/recent?limit=${limit}`);
+      
+      // Se estamos em desenvolvimento e não há resposta da API, gerar dados de demonstração
+      if ((!response.data || response.data.length === 0) && process.env.NODE_ENV === 'development') {
+        return generateMockFeedbacks(limit);
+      }
+      
       return response.data;
     } catch (error) {
       console.error('Erro ao buscar feedbacks recentes:', error);
+      
+      // Em caso de erro em ambiente de desenvolvimento, gerar dados de demonstração
+      if (process.env.NODE_ENV === 'development') {
+        return generateMockFeedbacks(limit);
+      }
+      
       throw error.response ? error.response.data : error;
     }
   },
@@ -105,11 +152,10 @@ const feedbackService = {
     }
   },
   
-  // NOVO MÉTODO: Para administradores: excluir feedback
+  // Para administradores: excluir feedback
   deleteFeedback: async (feedbackId) => {
     try {
-      // Alterando de '/feedback/:id' para '/admin/feedback/:id' ou verificando o caminho correto
-      // Assumindo que a rota correta seja '/feedback/:id':
+      // Implementação do método para excluir um feedback
       const response = await api.delete(`/feedback/${feedbackId}`);
       return response.data;
     } catch (error) {
@@ -117,6 +163,115 @@ const feedbackService = {
       throw error.response ? error.response.data : error;
     }
   }
+};
+
+// Função auxiliar para gerar estatísticas falsas para desenvolvimento
+const generateMockStats = (period) => {
+  // Valores básicos
+  let responseRate = 75;
+  let motivationAvg = 7.2;
+  let workloadAvg = 6.8;
+  let performanceAvg = 7.5;
+  
+  // Variar um pouco com base no período
+  if (period === 'last-month') {
+    responseRate = 68;
+    motivationAvg = 6.9;
+    workloadAvg = 7.2;
+    performanceAvg = 7.0;
+  } else if (period === 'last-quarter') {
+    responseRate = 72;
+    motivationAvg = 7.1;
+    workloadAvg = 7.0;
+    performanceAvg = 7.2;
+  }
+  
+  // Distribuição do apoio da equipe
+  const supportYesPercentage = 60;
+  const supportPartialPercentage = 30;
+  const supportNoPercentage = 10;
+  
+  return {
+    responseRate,
+    motivationAvg,
+    workloadAvg,
+    performanceAvg,
+    supportYesPercentage,
+    supportPartialPercentage,
+    supportNoPercentage,
+    totalEmployees: 20,
+    pendingFeedbacks: 5
+  };
+};
+
+// Função auxiliar para gerar tendências falsas para desenvolvimento
+const generateMockTrends = (period) => {
+  let direction = 'up';
+  let percentage = 5;
+  let weeklyValues = [7.2, 6.8, 7.0, 7.4, 7.6, 7.5, 7.8];
+  
+  // Variar com base no período
+  if (period === 'last-month') {
+    direction = 'up';
+    percentage = 3;
+    weeklyValues = [6.5, 6.7, 6.9, 7.0, 7.2, 7.3, 7.5];
+  } else if (period === 'last-quarter') {
+    direction = 'down';
+    percentage = 2;
+    weeklyValues = [7.8, 7.6, 7.5, 7.3, 7.2, 7.0, 6.9];
+  } else if (period === 'year-to-date') {
+    direction = 'stable';
+    percentage = 1;
+    weeklyValues = [7.2, 7.3, 7.1, 7.2, 7.0, 7.3, 7.2];
+  }
+  
+  return {
+    direction,
+    percentage,
+    weeklyValues
+  };
+};
+
+// Função auxiliar para gerar feedbacks falsos para desenvolvimento
+const generateMockFeedbacks = (limit = 5) => {
+  const names = ['João Silva', 'Maria Santos', 'Ana Oliveira', 'Carlos Ferreira', 'Luiza Costa', 'Pedro Souza'];
+  const departments = ['Desenvolvimento', 'Marketing', 'RH', 'Vendas', 'Suporte', 'Finanças'];
+  const supports = ['Sim', 'Em partes', 'Não'];
+  const suggestions = [
+    'Precisamos de mais reuniões em equipe para alinhar os objetivos.',
+    'Falta comunicação entre os departamentos.',
+    'A carga de trabalho está desbalanceada entre os membros da equipe.',
+    'Seria bom ter mais tempo para capacitação.',
+    'As metodologias ágeis poderiam ser melhor implementadas.'
+  ];
+  
+  const feedbacks = [];
+  
+  // Gerar feedbacks aleatórios
+  for (let i = 0; i < limit; i++) {
+    // Gerar valores aleatórios
+    const motivation = Math.floor(Math.random() * 5) + 5; // 5-10
+    const workload = Math.floor(Math.random() * 8) + 3; // 3-10
+    const performance = Math.floor(Math.random() * 5) + 5; // 5-10
+    
+    // Data aleatória nos últimos 30 dias
+    const date = new Date();
+    date.setDate(date.getDate() - Math.floor(Math.random() * 30));
+    
+    feedbacks.push({
+      id: i + 1,
+      name: names[Math.floor(Math.random() * names.length)],
+      dept: departments[Math.floor(Math.random() * departments.length)],
+      date: date.toISOString().split('T')[0],
+      motivation,
+      workload,
+      performance,
+      support: supports[Math.floor(Math.random() * supports.length)],
+      improvementSuggestion: Math.random() > 0.3 ? suggestions[Math.floor(Math.random() * suggestions.length)] : ''
+    });
+  }
+  
+  return feedbacks;
 };
 
 export default feedbackService;

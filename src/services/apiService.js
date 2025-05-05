@@ -156,8 +156,134 @@ const apiService = {
         console.error('Erro ao buscar dados do dashboard:', error);
         throw error.response ? error.response.data : error;
       }
+    },
+    
+    // Obter a contagem de usuários
+    getUserCount: async () => {
+      try {
+        const response = await api.get('/admin/users/count');
+        
+        // Se estiver em um ambiente de desenvolvimento e a API não estiver disponível,
+        // retorna um valor simulado para teste
+        if (!response.data && process.env.NODE_ENV === 'development') {
+          // Simulando valor para desenvolvimento
+          const savedCount = localStorage.getItem('simulatedUserCount');
+          let count = savedCount ? parseInt(savedCount) : 3;
+          
+          // Ocasionalmente incrementa para simular novos usuários
+          if (Math.random() < 0.1) {
+            count++;
+            localStorage.setItem('simulatedUserCount', count.toString());
+          }
+          
+          return { count };
+        }
+        
+        return response.data;
+      } catch (error) {
+        console.error('Erro ao buscar contagem de usuários:', error);
+        
+        // Em desenvolvimento, retornar um valor simulado em caso de erro
+        if (process.env.NODE_ENV === 'development') {
+          const savedCount = localStorage.getItem('simulatedUserCount') || '3';
+          return { count: parseInt(savedCount) };
+        }
+        
+        throw error.response ? error.response.data : error;
+      }
+    },
+    
+    // Buscar todos os usuários
+    getAllUsers: async () => {
+      try {
+        const response = await api.get('/admin/users');
+        
+        // Se estiver em ambiente de desenvolvimento e não há resposta da API,
+        // retornar dados simulados para teste
+        if ((!response.data || response.data.length === 0) && process.env.NODE_ENV === 'development') {
+          return generateMockUsers();
+        }
+        
+        return response.data;
+      } catch (error) {
+        console.error('Erro ao buscar todos os usuários:', error);
+        
+        // Em ambiente de desenvolvimento, retornar dados simulados em caso de erro
+        if (process.env.NODE_ENV === 'development') {
+          return generateMockUsers();
+        }
+        
+        throw error.response ? error.response.data : error;
+      }
+    },
+    
+    // Excluir um usuário
+    deleteUser: async (userId) => {
+      try {
+        const response = await api.delete(`/admin/users/${userId}`);
+        
+        // Se estiver em ambiente de desenvolvimento, simular a exclusão
+        if (process.env.NODE_ENV === 'development') {
+          // Atualizar a contagem de usuários simulados
+          const savedCount = localStorage.getItem('simulatedUserCount');
+          if (savedCount) {
+            const count = Math.max(parseInt(savedCount) - 1, 0);
+            localStorage.setItem('simulatedUserCount', count.toString());
+          }
+          
+          // Simular um pequeno atraso para parecer mais realista
+          return new Promise((resolve) => {
+            setTimeout(() => {
+              resolve({ success: true, message: 'Usuário excluído com sucesso' });
+            }, 500);
+          });
+        }
+        
+        return response.data;
+      } catch (error) {
+        console.error('Erro ao excluir usuário:', error);
+        throw error.response ? error.response.data : error;
+      }
     }
   }
+};
+
+// Função auxiliar para gerar usuários simulados para desenvolvimento
+const generateMockUsers = () => {
+  // Nomes para usuários simulados
+  const firstNames = ['João', 'Maria', 'Pedro', 'Ana', 'Carlos', 'Fernanda', 'Ricardo', 'Juliana', 'Lucas', 'Mariana'];
+  const lastNames = ['Silva', 'Santos', 'Oliveira', 'Souza', 'Costa', 'Rodrigues', 'Ferreira', 'Almeida', 'Pereira', 'Gomes'];
+  
+  // Departamentos
+  const departments = ['Desenvolvimento', 'Marketing', 'RH', 'Vendas', 'Suporte', 'Financeiro', 'Administrativo', 'Operações', 'Design', 'Jurídico'];
+  
+  // Funções
+  const roles = ['employee', 'admin'];
+  
+  // Lista de usuários
+  const users = [];
+  
+  // Gerar usuários simulados
+  const numUsers = parseInt(localStorage.getItem('simulatedUserCount')) || 15;
+  
+  for (let i = 0; i < numUsers; i++) {
+    const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
+    const lastName = lastNames[Math.floor(Math.random() * lastNames.length)];
+    const department = departments[Math.floor(Math.random() * departments.length)];
+    
+    // Garantir que pelo menos um administrador seja criado
+    const role = i === 0 ? 'admin' : (Math.random() < 0.2 ? 'admin' : 'employee');
+    
+    users.push({
+      id: i + 1,
+      name: `${firstName} ${lastName}`,
+      email: `${firstName.toLowerCase()}.${lastName.toLowerCase()}@exemplo.com`,
+      department,
+      role
+    });
+  }
+  
+  return users;
 };
 
 export default apiService;
