@@ -7,49 +7,57 @@ import FeedbackHistory from '../../components/FeedbackHistory';
 import Navbar from '../../components/Navbar';
 import theme from '../../styles/theme';
 
+// Estilos atualizados para tela cheia e responsividade
 const styles = {
   container: {
     display: 'flex',
     flexDirection: 'column',
     minHeight: '100vh',
+    width: '100%',
     backgroundColor: theme.colors.background.default
   },
   content: {
     flex: 1,
-    padding: theme.spacing.xl,
-    maxWidth: '1200px',
+    padding: '20px',
+    width: '100%',
+    maxWidth: '100%',
     margin: '0 auto',
-    width: '100%'
+    boxSizing: 'border-box'
   },
   header: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: theme.spacing.xl
+    marginBottom: '24px',
+    flexWrap: 'wrap',
+    width: '100%'
   },
   pageTitle: {
-    fontSize: theme.typography.fontSize.xxxl,
-    fontWeight: theme.typography.fontWeight.bold,
+    fontSize: 'min(2.5rem, 8vw)',
+    fontWeight: 'bold',
     color: theme.colors.text.primary,
-    margin: 0
+    margin: '0 0 16px 0',
+    width: '100%'
   },
   welcomeSection: {
     backgroundColor: theme.colors.background.paper,
-    borderRadius: theme.borderRadius.lg,
-    padding: theme.spacing.xl,
-    marginBottom: theme.spacing.xl,
+    borderRadius: '12px',
+    padding: '24px',
+    marginBottom: '24px',
     borderLeft: `4px solid ${theme.colors.info.main}`,
-    boxShadow: theme.shadows.md
+    boxShadow: theme.shadows.md,
+    width: '100%',
+    boxSizing: 'border-box'
   },
   welcomeTitle: {
-    fontSize: theme.typography.fontSize.xl,
-    fontWeight: theme.typography.fontWeight.bold,
+    fontSize: 'min(1.5rem, 6vw)',
+    fontWeight: 'bold',
     color: theme.colors.info.main,
     marginTop: 0,
-    marginBottom: theme.spacing.sm
+    marginBottom: '8px'
   },
   welcomeText: {
-    fontSize: theme.typography.fontSize.md,
+    fontSize: 'min(1rem, 4vw)',
     color: theme.colors.text.secondary,
     marginBottom: 0
   },
@@ -59,7 +67,8 @@ const styles = {
     alignItems: 'center',
     height: '100vh',
     flexDirection: 'column',
-    backgroundColor: theme.colors.background.default
+    backgroundColor: theme.colors.background.default,
+    width: '100%'
   },
   loadingSpinner: {
     width: '50px',
@@ -68,20 +77,33 @@ const styles = {
     borderTopColor: theme.colors.primary.main,
     borderRadius: '50%',
     animation: 'spin 1s linear infinite',
-    marginBottom: theme.spacing.lg
+    marginBottom: '16px'
   },
   loadingText: {
     color: theme.colors.text.secondary,
-    fontSize: theme.typography.fontSize.md,
-    fontWeight: theme.typography.fontWeight.medium
+    fontSize: '1rem',
+    fontWeight: '500'
   },
   errorMessage: {
     backgroundColor: 'rgba(239, 68, 68, 0.1)',
     color: theme.colors.error.dark,
-    padding: theme.spacing.lg,
-    marginBottom: theme.spacing.xl,
-    borderRadius: theme.borderRadius.md,
-    borderLeft: `4px solid ${theme.colors.error.main}`
+    padding: '16px',
+    marginBottom: '24px',
+    borderRadius: '8px',
+    borderLeft: `4px solid ${theme.colors.error.main}`,
+    width: '100%',
+    boxSizing: 'border-box'
+  },
+  // Estilos específicos para o formulário de feedback
+  feedbackFormContainer: {
+    width: '100%',
+    boxSizing: 'border-box'
+  },
+  // Estilos específicos para o histórico de feedback
+  feedbackHistoryContainer: {
+    width: '100%',
+    boxSizing: 'border-box',
+    marginTop: '40px'
   }
 };
 
@@ -90,8 +112,21 @@ const EmployeeDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [userFeedback, setUserFeedback] = useState([]);
-  const [latestFeedback, setLatestFeedback] = useState(null);
-  const [weeklyFeedbackSubmitted, setWeeklyFeedbackSubmitted] = useState(false);
+  
+  // Efeito para detectar mudanças no tamanho da tela
+  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+  useEffect(() => {
+    const handleResize = () => {
+      setWindowWidth(window.innerWidth);
+    };
+    
+    window.addEventListener('resize', handleResize);
+    
+    // Cleanup
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, []);
   
   useEffect(() => {
     // Carregar dados do usuário
@@ -104,23 +139,6 @@ const EmployeeDashboard = () => {
           // Buscar feedbacks do usuário
           const feedbacks = await apiService.feedback.getMyFeedbacks();
           setUserFeedback(feedbacks);
-          
-          // Verificar se já enviou feedback esta semana
-          if (feedbacks.length > 0) {
-            const latest = feedbacks[0]; // O primeiro deve ser o mais recente
-            setLatestFeedback(latest);
-            
-            // Verificar se o feedback foi enviado esta semana
-            const today = new Date();
-            const latestDate = new Date(latest.date);
-            const diffTime = Math.abs(today - latestDate);
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-            
-            // Se o último feedback foi há menos de 7 dias, considerar como enviado esta semana
-            setWeeklyFeedbackSubmitted(diffDays < 7);
-          } else {
-            setWeeklyFeedbackSubmitted(false);
-          }
         }
       } catch (err) {
         console.error('Erro ao carregar dados do usuário:', err);
@@ -137,8 +155,6 @@ const EmployeeDashboard = () => {
   const handleFeedbackSubmitted = (newFeedback) => {
     // Adicionar o novo feedback ao início do array de feedbacks (mais recente primeiro)
     setUserFeedback([newFeedback, ...userFeedback]);
-    setLatestFeedback(newFeedback);
-    setWeeklyFeedbackSubmitted(true);
   };
   
   // Função para formatar a data atual
@@ -179,19 +195,19 @@ const EmployeeDashboard = () => {
         <div style={styles.welcomeSection}>
           <h2 style={styles.welcomeTitle}>Olá, {currentUser?.name || 'Usuário'}!</h2>
           <p style={styles.welcomeText}>
-            Hoje é {getCurrentDate()}. {weeklyFeedbackSubmitted 
-              ? 'Você já enviou seu feedback desta semana. Obrigado por contribuir!' 
-              : 'Não esqueça de compartilhar como foi sua semana.'}
+            Hoje é {getCurrentDate()}. Compartilhe como está sendo sua experiência na empresa!
           </p>
         </div>
         
-        {/* Mostrar formulário apenas se ainda não enviou feedback esta semana */}
-        {!weeklyFeedbackSubmitted && (
+        {/* Container de feedback sempre disponível */}
+        <div style={styles.feedbackFormContainer}>
           <FeedbackForm onFeedbackSubmitted={handleFeedbackSubmitted} />
-        )}
+        </div>
         
         {/* Histórico de feedback */}
-        <FeedbackHistory feedbacks={userFeedback} />
+        <div style={styles.feedbackHistoryContainer}>
+          <FeedbackHistory feedbacks={userFeedback} />
+        </div>
       </div>
     </div>
   );

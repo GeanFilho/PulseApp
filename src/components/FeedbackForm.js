@@ -2,143 +2,174 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import apiService from '../services/apiService';
-import theme from '../styles/theme';
 
-// Manter todos os estilos originais
+// Estilos otimizados para mobile
 const styles = {
   // Container do formulário
   formContainer: {
-    backgroundColor: theme.colors.background.paper,
-    borderRadius: theme.borderRadius.lg,
-    padding: theme.spacing.xl,
-    marginBottom: theme.spacing.xl,
-    borderLeft: `4px solid ${theme.colors.primary.main}`,
-    boxShadow: theme.shadows.lg
+    backgroundColor: 'white',
+    borderRadius: '12px',
+    padding: '16px',
+    marginBottom: '24px',
+    borderLeft: '4px solid #4f46e5',
+    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+    width: '100%',
+    maxWidth: '100%',
+    boxSizing: 'border-box'
   },
   
   // Cabeçalho
   header: {
     textAlign: 'center',
-    marginBottom: theme.spacing.xl
+    marginBottom: '20px',
+    width: '100%'
   },
   title: {
-    fontSize: theme.typography.fontSize.xxl,
-    color: theme.colors.primary.main,
-    fontWeight: theme.typography.fontWeight.bold,
-    marginBottom: theme.spacing.sm
+    fontSize: '18px',
+    color: '#4f46e5',
+    fontWeight: 'bold',
+    marginBottom: '8px'
   },
   subtitle: {
-    fontSize: theme.typography.fontSize.lg,
-    color: theme.colors.text.primary,
-    fontWeight: theme.typography.fontWeight.semibold,
-    marginBottom: theme.spacing.md
+    fontSize: '16px',
+    color: '#111827',
+    fontWeight: 'bold',
+    marginBottom: '12px'
   },
   description: {
-    color: theme.colors.text.secondary,
-    fontSize: theme.typography.fontSize.md
+    color: '#4b5563',
+    fontSize: '14px'
   },
   
   // Seção de avaliação
   ratingSection: {
-    marginBottom: theme.spacing.xl
+    marginBottom: '16px',
+    width: '100%'
   },
   ratingLabel: {
     display: 'block',
-    fontWeight: theme.typography.fontWeight.medium,
-    marginBottom: theme.spacing.md,
-    color: theme.colors.text.primary
+    fontWeight: '500',
+    marginBottom: '8px',
+    color: '#374151',
+    fontSize: '14px'
   },
   
-  // Botões de escala
+  // Botões de escala - com ajustes para mobile
   scaleButtons: {
     display: 'flex',
     justifyContent: 'space-between',
-    marginBottom: theme.spacing.sm
+    marginBottom: '8px',
+    width: '100%',
+    flexWrap: 'wrap',
+    gap: '2px'
   },
   scaleButton: (selected) => ({
-    width: '36px',
-    height: '36px',
+    width: '28px',
+    height: '28px',
     borderRadius: '50%',
-    border: `2px solid ${theme.colors.primary.main}`,
-    backgroundColor: selected ? theme.colors.primary.main : 'transparent',
-    color: selected ? 'white' : theme.colors.primary.main,
-    fontWeight: theme.typography.fontWeight.bold,
+    border: '2px solid #4f46e5',
+    backgroundColor: selected ? '#4f46e5' : 'transparent',
+    color: selected ? 'white' : '#4f46e5',
+    fontWeight: 'bold',
     cursor: 'pointer',
-    transition: `all ${theme.transitions.speed.normal} ${theme.transitions.easing.easeInOut}`
+    transition: 'all 0.2s ease-in-out',
+    fontSize: '12px',
+    padding: 0, // Remover padding
+    margin: '2px', // Adicionar pequena margem
+    flexShrink: 0 // Evitar encolhimento
   }),
   
   // Legenda da escala
   scaleLegend: {
     display: 'flex',
     justifyContent: 'space-between',
-    fontSize: theme.typography.fontSize.xs,
-    color: theme.colors.text.secondary,
-    marginBottom: theme.spacing.xl
+    fontSize: '12px',
+    color: '#6b7280',
+    marginBottom: '16px',
+    width: '100%'
   },
   
   // Grupo de opções de rádio
   radioGroup: {
     display: 'flex',
-    gap: theme.spacing.lg,
-    marginBottom: theme.spacing.xl
+    gap: '10px',
+    marginBottom: '16px',
+    flexWrap: 'wrap',
+    width: '100%'
   },
   radioLabel: {
     display: 'flex',
     alignItems: 'center',
-    gap: theme.spacing.sm,
-    cursor: 'pointer'
+    gap: '6px',
+    cursor: 'pointer',
+    fontSize: '14px',
+    marginBottom: '4px' // Adicionar margem para separação vertical
   },
   radioInput: {
-    width: '18px',
-    height: '18px'
+    width: '16px',
+    height: '16px'
   },
   
   // Campo de texto
   formGroup: {
-    marginBottom: theme.spacing.xl
+    marginBottom: '16px',
+    width: '100%'
   },
   textArea: {
     width: '100%',
-    padding: theme.spacing.md,
-    border: `1px solid ${theme.colors.grey[300]}`,
-    borderRadius: theme.borderRadius.md,
-    fontSize: theme.typography.fontSize.md,
-    minHeight: '100px',
-    resize: 'vertical'
+    padding: '12px',
+    borderRadius: '8px',
+    border: '1px solid #d1d5db',
+    fontSize: '14px',
+    minHeight: '80px',
+    resize: 'vertical',
+    boxSizing: 'border-box'
   },
   
   // Botão de envio
   submitButton: (disabled) => ({
-    background: `linear-gradient(to right, ${theme.colors.primary.main}, ${theme.colors.secondary.main})`,
+    background: disabled 
+      ? '#9ca3af' 
+      : 'linear-gradient(to right, #4f46e5, #7e22ce)',
     color: 'white',
     border: 'none',
-    padding: `${theme.spacing.md} ${theme.spacing.xl}`,
-    borderRadius: theme.borderRadius.md,
-    fontWeight: theme.typography.fontWeight.medium,
+    padding: '12px 24px',
+    borderRadius: '8px',
+    fontWeight: '500',
     cursor: disabled ? 'not-allowed' : 'pointer',
-    opacity: disabled ? 0.7 : 1
+    opacity: disabled ? 0.7 : 1,
+    fontSize: '14px',
+    transition: 'all 0.2s ease',
+    width: '100%',
+    maxWidth: '100%',
+    display: 'block',
+    margin: '0 auto'
   }),
   
   // Mensagem de sucesso
   successMessage: {
     display: 'flex',
     alignItems: 'center',
-    marginTop: theme.spacing.lg,
-    padding: theme.spacing.lg,
+    marginTop: '16px',
+    padding: '12px',
     backgroundColor: 'rgba(16, 185, 129, 0.1)',
-    color: theme.colors.success.dark,
-    borderRadius: theme.borderRadius.md,
-    borderLeft: `4px solid ${theme.colors.success.main}`
+    color: '#065f46',
+    borderRadius: '8px',
+    borderLeft: '4px solid #10b981',
+    width: '100%',
+    boxSizing: 'border-box',
+    fontSize: '14px'
   },
   successIcon: {
     backgroundColor: 'rgba(16, 185, 129, 0.2)',
     borderRadius: '50%',
-    width: '32px',
-    height: '32px',
+    width: '24px',
+    height: '24px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: theme.spacing.md
+    marginRight: '12px',
+    flexShrink: 0
   }
 };
 
@@ -221,7 +252,7 @@ const FeedbackForm = ({ onFeedbackSubmitted }) => {
     }
   };
   
-  // Renderizar botões de escala (0-10)
+  // Renderizar botões de escala (0-10) com ajustes para mobile
   const renderScaleButtons = (field, value) => {
     return (
       <div style={styles.scaleButtons}>
@@ -326,7 +357,7 @@ const FeedbackForm = ({ onFeedbackSubmitted }) => {
       {feedbackSent && (
         <div style={styles.successMessage}>
           <div style={styles.successIcon}>
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
             </svg>
           </div>

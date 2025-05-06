@@ -61,22 +61,34 @@ const styles = {
     border: `1px solid ${theme.colors.grey[300]}`,
     fontSize: theme.typography.fontSize.md
   },
-  statDisplay: {
+  infoBox: {
     display: 'flex',
-    alignItems: 'center',
-    padding: theme.spacing.md,
-    backgroundColor: theme.colors.primary.light + '10',
+    flexDirection: 'column',
+    gap: theme.spacing.md,
+    padding: theme.spacing.lg,
+    backgroundColor: theme.colors.info.light + '10',
     borderRadius: theme.borderRadius.md,
-    marginBottom: theme.spacing.lg
+    marginBottom: theme.spacing.xl,
+    borderLeft: `4px solid ${theme.colors.info.main}`
   },
-  statLabel: {
-    fontWeight: theme.typography.fontWeight.medium,
-    marginRight: theme.spacing.md,
-    color: theme.colors.text.primary
+  infoTitle: {
+    fontSize: theme.typography.fontSize.lg,
+    fontWeight: theme.typography.fontWeight.semibold,
+    color: theme.colors.info.main,
+    margin: 0
   },
-  statValue: {
-    fontWeight: theme.typography.fontWeight.bold,
-    color: theme.colors.primary.main,
+  infoText: {
+    fontSize: theme.typography.fontSize.md,
+    color: theme.colors.text.secondary,
+    margin: 0
+  },
+  infoList: {
+    margin: `${theme.spacing.sm} 0`,
+    paddingLeft: theme.spacing.xl
+  },
+  infoListItem: {
+    margin: `${theme.spacing.xs} 0`,
+    color: theme.colors.text.secondary
   },
   buttonGroup: {
     display: 'flex',
@@ -168,11 +180,10 @@ const AdminSettings = () => {
   const navigate = useNavigate();
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [statsLoading, setStatsLoading] = useState(true);
+  const [statsLoading, setStatsLoading] = useState(false);
   
   // Estados para as configurações
   const [companyName, setCompanyName] = useState('ProfitLabs');
-  const [responseRate, setResponseRate] = useState(0);
   
   // Estado para novo departamento
   const [newDepartment, setNewDepartment] = useState('');
@@ -195,15 +206,8 @@ const AdminSettings = () => {
           setCompanyName('ProfitLabs');
           localStorage.setItem('companyName', 'ProfitLabs');
         }
-
-        // Simulação de chamada para API para taxa de resposta
-        setTimeout(() => {
-          setResponseRate(72);
-          setStatsLoading(false);
-        }, 1000);
       } catch (error) {
         console.error('Erro ao carregar configurações:', error);
-        setStatsLoading(false);
       }
     };
     
@@ -355,15 +359,22 @@ const AdminSettings = () => {
             />
           </div>
           
-          <div style={styles.statDisplay}>
-            <span style={styles.statLabel}>Taxa de Resposta de Feedback:</span>
-            <span style={styles.statValue}>
-              {statsLoading ? (
-                <span style={styles.loadingSpinner}></span>
-              ) : (
-                `${responseRate}%`
-              )}
-            </span>
+          <div style={styles.infoBox}>
+            <h3 style={styles.infoTitle}>Funções Administrativas Disponíveis</h3>
+            <p style={styles.infoText}>
+              Nesta página de configurações, você como administrador pode realizar as seguintes atividades:
+            </p>
+            <ul style={styles.infoList}>
+              <li style={styles.infoListItem}>Alterar o nome da empresa exibido em todo o sistema</li>
+              <li style={styles.infoListItem}>Gerenciar departamentos - adicionar novos ou remover existentes</li>
+              <li style={styles.infoListItem}>Configurar as opções disponíveis para os usuários ao se cadastrarem</li>
+              <li style={styles.infoListItem}>Personalizar a estrutura organizacional da empresa no sistema</li>
+              <li style={styles.infoListItem}>Definir configurações que afetam a experiência de todos os usuários</li>
+            </ul>
+            <p style={styles.infoText}>
+              As alterações realizadas aqui serão aplicadas em todo o sistema Pulse, afetando todos os usuários.
+              Certifique-se de revisar cuidadosamente antes de salvar.
+            </p>
           </div>
         </div>
         
