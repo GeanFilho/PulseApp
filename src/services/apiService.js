@@ -190,6 +190,7 @@ register: async (userData) => {
     },
     
     // Atualizar visibilidade do usuário
+// Atualizar visibilidade do usuário
 updateUserVisibility: async (userId, isVisible) => {
   try {
     // Primeiro tentar chamar a API
@@ -242,9 +243,21 @@ updateUserVisibility: async (userId, isVisible) => {
           hiddenUsers: hiddenUserIds,
           action: isVisible ? 'show' : 'hide',
           userId: userId,
-          visibleCount: newVisibleCount  // Adicionar a contagem visível ao evento
+          visibleCount: newVisibleCount,  // Adicionar a contagem visível ao evento
+          forceUpdate: true  // Adicionar uma flag para forçar a atualização
         }
       }));
+      
+      // Tentar atualizar também através de eventos de storage para outras janelas
+      try {
+        const event = new StorageEvent('storage', {
+          key: 'hiddenUsers',
+          newValue: JSON.stringify(hiddenUserIds)
+        });
+        window.dispatchEvent(event);
+      } catch (storageError) {
+        console.error('Erro ao disparar evento de storage:', storageError);
+      }
       
       return { 
         success: true, 
@@ -258,8 +271,7 @@ updateUserVisibility: async (userId, isVisible) => {
     console.error(`Erro ao ${isVisible ? 'mostrar' : 'ocultar'} usuário:`, error);
     throw error;
   }
-},
-    
+},    
     // Obter a contagem de usuários
     getUserCount: async () => {
       try {

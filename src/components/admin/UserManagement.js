@@ -24,6 +24,35 @@ const UserManagement = ({ onUserVisibilityChange }) => {
     return saved ? JSON.parse(saved) : [];
   });
 
+  // Verificar se a função de callback foi recebida corretamente
+  useEffect(() => {
+    console.log("onUserVisibilityChange disponível:", typeof onUserVisibilityChange === 'function');
+  }, [onUserVisibilityChange]);
+
+  // Função auxiliar para calcular a contagem de usuários visíveis
+  const calculateVisibleUserCount = () => {
+    // Obter contagem total de usuários
+    const totalCountStr = localStorage.getItem('simulatedUserCount');
+    const totalCount = totalCountStr ? parseInt(totalCountStr) : 3;
+    
+    // Calcular quantos usuários visíveis (total - ocultos)
+    const visibleCount = Math.max(totalCount - hiddenUsers.length, 0);
+    
+    console.log('Calculando contagem visível:', {
+      totalCount,
+      hiddenUsers: hiddenUsers.length,
+      visibleCount
+    });
+    
+    // Atualizar contador globalmente se callback existir
+    if (typeof onUserVisibilityChange === 'function') {
+      console.log('>> Atualizando contador para:', visibleCount);
+      onUserVisibilityChange(visibleCount);
+    }
+    
+    return visibleCount;
+  };
+
   // Função para buscar usuários
   const fetchUsers = async () => {
     try {
@@ -62,43 +91,6 @@ const UserManagement = ({ onUserVisibilityChange }) => {
     setActionType('');
   };
 
-  // Função para forçar atualização do contador
-  const forceUpdateCounter = () => {
-    try {
-      // Obter contagem total de usuários
-      const savedCount = localStorage.getItem('simulatedUserCount');
-      const totalCount = savedCount ? parseInt(savedCount) : 3;
-      
-      // Obter lista de usuários ocultos atualizada
-      const hiddenUserIds = hiddenUsers; // usar o estado atual já atualizado
-      
-      // Calcular nova contagem visível
-      const visibleCount = Math.max(totalCount - hiddenUserIds.length, 0);
-      
-      // Atualizar contador no localStorage
-      localStorage.setItem('visibleUserCount', visibleCount.toString());
-      
-      // Tentar atualizar o contador diretamente no DOM se possível
-      try {
-        const counterElement = document.getElementById('user-counter-value');
-        if (counterElement) {
-          counterElement.textContent = visibleCount;
-        }
-      } catch (domError) {
-        console.error('Erro ao atualizar contador no DOM:', domError);
-      }
-      
-      // Chamar o callback para atualizar o contador no Dashboard
-      if (typeof onUserVisibilityChange === 'function') {
-        onUserVisibilityChange(visibleCount);
-      }
-      
-      console.log('Contador atualizado forçadamente para:', visibleCount);
-    } catch (error) {
-      console.error('Erro ao forçar atualização do contador:', error);
-    }
-  };
-
   // Função para ocultar um usuário
   const hideUser = async () => {
     if (!userToAction) return;
@@ -107,43 +99,45 @@ const UserManagement = ({ onUserVisibilityChange }) => {
       setActionLoading(true);
       setActionError('');
       
-      // Adiciona o ID do usuário à lista de usuários ocultos
-      const updatedHiddenUsers = [...hiddenUsers, userToAction.id];
-      setHiddenUsers(updatedHiddenUsers);
+      // IMPORTANTE: Criar uma nova referência do array é fundamental
+      const updatedHiddenUsers = [...hiddenUsers];
       
-      // Salva no localStorage para persistir entre recarregamentos
-      localStorage.setItem('hiddenUsers', JSON.stringify(updatedHiddenUsers));
-      
-      try {
-        // Tenta atualizar no backend
-        await apiService.admin.updateUserVisibility(userToAction.id, false);
-      } catch (apiError) {
-        console.log('Erro de API do backend, mas continuando com atualização local:', apiError);
-        // Continuamos mesmo se a API falhar, já que estamos em modo de desenvolvimento/simulação
+      // Só adiciona se não estiver já na lista
+      if (!updatedHiddenUsers.includes(userToAction.id)) {
+        updatedHiddenUsers.push(userToAction.id);
       }
       
-      // Forçar atualização do contador
-      forceUpdateCounter();
+      // Atualizar estado local
+      setHiddenUsers(updatedHiddenUsers);
       
-      // Disparar evento de forma direta e simples
+      // Salvar no localStorage
+      localStorage.setItem('hiddenUsers', JSON.stringify(updatedHiddenUsers));
+      
+      // CRUCIAL: Calcular e atualizar o contador
+      calculateVisibleUserCount();
+      
+      // Disparar evento personalizado (abordagem alternativa)
       const event = new CustomEvent('userVisibilityChanged', {
-        detail: { action: 'hide' }
+        detail: { 
+          action: 'hide',
+          userId: userToAction.id,
+          forceUpdate: true
+        }
       });
       document.dispatchEvent(event);
       
-      // Fechar o modal de confirmação
+      // Fechar modal e mostrar sucesso
       setActionConfirmOpen(false);
       setUserToAction(null);
       setActionSuccess(true);
       
-      // Exibir mensagem de sucesso por 2 segundos
       setTimeout(() => {
         setActionSuccess(false);
       }, 2000);
       
     } catch (err) {
       console.error('Erro ao ocultar usuário:', err);
-      setActionError('Ocorreu um erro ao ocultar o usuário, mas a operação pode ter sido parcialmente bem-sucedida. Por favor, atualize a página para ver o estado atual.');
+      setActionError('Ocorreu um erro ao ocultar o usuário. Por favor, tente novamente.');
     } finally {
       setActionLoading(false);
     }
@@ -157,43 +151,40 @@ const UserManagement = ({ onUserVisibilityChange }) => {
       setActionLoading(true);
       setActionError('');
       
-      // Remove o ID do usuário da lista de usuários ocultos
+      // IMPORTANTE: Criar uma nova referência do array
       const updatedHiddenUsers = hiddenUsers.filter(id => id !== userToAction.id);
+      
+      // Atualizar estado local
       setHiddenUsers(updatedHiddenUsers);
       
-      // Salva no localStorage para persistir entre recarregamentos
+      // Salvar no localStorage
       localStorage.setItem('hiddenUsers', JSON.stringify(updatedHiddenUsers));
       
-      try {
-        // Tenta atualizar no backend
-        await apiService.admin.updateUserVisibility(userToAction.id, true);
-      } catch (apiError) {
-        console.log('Erro de API do backend, mas continuando com atualização local:', apiError);
-        // Continuamos mesmo se a API falhar, já que estamos em modo de desenvolvimento/simulação
-      }
+      // CRUCIAL: Calcular e atualizar o contador
+      calculateVisibleUserCount();
       
-      // Forçar atualização do contador
-      forceUpdateCounter();
-      
-      // Disparar evento de forma direta e simples
+      // Disparar evento personalizado
       const event = new CustomEvent('userVisibilityChanged', {
-        detail: { action: 'show' }
+        detail: { 
+          action: 'show',
+          userId: userToAction.id,
+          forceUpdate: true
+        }
       });
       document.dispatchEvent(event);
       
-      // Fechar o modal de confirmação
+      // Fechar modal e mostrar sucesso
       setActionConfirmOpen(false);
       setUserToAction(null);
       setActionSuccess(true);
       
-      // Exibir mensagem de sucesso por 2 segundos
       setTimeout(() => {
         setActionSuccess(false);
       }, 2000);
       
     } catch (err) {
       console.error('Erro ao mostrar usuário:', err);
-      setActionError('Ocorreu um erro ao mostrar o usuário, mas a operação pode ter sido parcialmente bem-sucedida. Por favor, atualize a página para ver o estado atual.');
+      setActionError('Ocorreu um erro ao mostrar o usuário. Por favor, tente novamente.');
     } finally {
       setActionLoading(false);
     }

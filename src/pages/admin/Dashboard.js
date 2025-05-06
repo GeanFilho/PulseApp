@@ -55,7 +55,7 @@ const AdminDashboard = () => {
     try {
       console.log("Atualizando contagem de usuários...");
       
-      // Obter contagem total de usuários do localStorage
+      // Obter contagem total de usuários
       const savedCount = localStorage.getItem('simulatedUserCount');
       const totalCount = savedCount ? parseInt(savedCount) : 3;
       
@@ -63,23 +63,12 @@ const AdminDashboard = () => {
       const hiddenUsers = localStorage.getItem('hiddenUsers');
       const hiddenUserIds = hiddenUsers ? JSON.parse(hiddenUsers) : [];
       
-      // Forma mais direta de calcular usuários visíveis
-      // Criar um array de IDs de 1 até totalCount
-      const allIds = Array.from({ length: totalCount }, (_, i) => i + 1);
+      // Calcular contagem visível de forma simples
+      const visibleCount = Math.max(totalCount - hiddenUserIds.length, 0);
       
-      // Filtrar para obter apenas os IDs que não estão ocultos
-      const visibleIds = allIds.filter(id => !hiddenUserIds.includes(id));
-      const visibleCount = visibleIds.length;
+      console.log('Contagem total:', totalCount, 'Ocultos:', hiddenUserIds.length, 'Visíveis:', visibleCount);
       
-      console.log('Contagem total de usuários:', totalCount);
-      console.log('IDs de usuários ocultos:', hiddenUserIds);
-      console.log('IDs de usuários visíveis:', visibleIds);
-      console.log('Contagem visível calculada:', visibleCount);
-      
-      // Salvar a contagem visível no localStorage para referência
-      localStorage.setItem('visibleUserCount', visibleCount.toString());
-      
-      // Atualizar o estado com a contagem visível
+      // Atualizar o estado
       setUserCount(visibleCount);
       
       return visibleCount;
@@ -90,7 +79,13 @@ const AdminDashboard = () => {
     }
   };
   
-  // Efeito para lidar com eventos de usuário
+  // Função para atualizar o contador diretamente
+  const updateUserCount = (count) => {
+    console.log('Atualizando contador de usuários para:', count);
+    setUserCount(parseInt(count)); // Garantir que seja um número
+  };
+  
+  // useEffect específico para o contador de usuários
   useEffect(() => {
     // Função para lidar com eventos de mudança de visibilidade do usuário
     const handleVisibilityChange = (event) => {
@@ -106,37 +101,15 @@ const AdminDashboard = () => {
       }
     };
     
-    // Função para lidar com qualquer alteração de contagem
-    const handleCountChange = (event) => {
-      console.log('Evento de alteração de contagem detectado:', event.detail);
-      // Sempre chamar fetchUserCount para garantir atualização
-      fetchUserCount();
-    };
-    
-    // Função para lidar com mudanças de armazenamento
-    const handleStorageChange = (event) => {
-      console.log('Evento de storage detectado:', event.key);
-      // Sempre chamar fetchUserCount para qualquer mudança relevante
-      fetchUserCount();
-    };
-    
-    // Registrar os ouvintes de eventos
+    // Registrar apenas este evento crucial
     document.addEventListener('userVisibilityChanged', handleVisibilityChange);
-    document.addEventListener('userCountChanged', handleCountChange);
-    window.addEventListener('storage', handleStorageChange);
     
-    // Buscar contagem inicial
+    // Fazer a primeira contagem
     fetchUserCount();
     
-    // Configurar um intervalo para verificar periodicamente (10 segundos)
-    const interval = setInterval(fetchUserCount, 10000);
-    
-    // Função de limpeza
+    // Limpar
     return () => {
       document.removeEventListener('userVisibilityChanged', handleVisibilityChange);
-      document.removeEventListener('userCountChanged', handleCountChange);
-      window.removeEventListener('storage', handleStorageChange);
-      clearInterval(interval);
     };
   }, []);
    
@@ -398,6 +371,16 @@ const AdminDashboard = () => {
       border: 'none',
       padding: '8px 16px',
       borderRadius: '8px',
+      cursor: 'pointer',
+      marginLeft: '8px'
+    },
+    updateCounterButton: {
+      backgroundColor: '#4f46e5',
+      color: 'white',
+      border: 'none',
+      borderRadius: '4px',
+      padding: '4px 8px',
+      fontSize: '12px',
       cursor: 'pointer',
       marginLeft: '8px'
     },
@@ -748,10 +731,10 @@ const AdminDashboard = () => {
 
         {/* Cards de estatísticas */}
         <div style={styles.statsGrid}>
-          {/* Card 1: Usuários Cadastrados */}
+          {/* Card 1: Usuários Cadastrados - COM BOTÃO REMOVIDO */}
           <div style={styles.statCard(0)}>
             <h3 style={styles.statTitle}>Usuários Cadastrados</h3>
-            <p style={styles.statValue}>{userCount}</p>
+            <p style={styles.statValue} id="user-counter-value">{userCount}</p>
             <div style={styles.statTrend()}>
               <span style={{ marginRight: '4px' }}>↑</span>
               Atualizado em tempo real
@@ -886,7 +869,7 @@ const AdminDashboard = () => {
 
         {/* Renderizar conteúdo com base na aba selecionada */}
         {activeTab === 'dashboard' && renderDashboardContent()}
-        {activeTab === 'users' && <UserManagement />}
+        {activeTab === 'users' && <UserManagement onUserVisibilityChange={updateUserCount} />}
       </div>
 
       {/* Modal para confirmação de exclusão */}
