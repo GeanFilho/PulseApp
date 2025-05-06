@@ -1,7 +1,8 @@
 // src/pages/admin/Settings.js
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../../components/Navbar';
+import apiService from '../../services/apiService';
 import theme from '../../styles/theme';
 
 const styles = {
@@ -44,12 +45,6 @@ const styles = {
     marginTop: 0,
     marginBottom: theme.spacing.lg
   },
-  formGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(2, 1fr)',
-    gap: theme.spacing.xl,
-    marginBottom: theme.spacing.xl
-  },
   formGroup: {
     marginBottom: theme.spacing.lg
   },
@@ -66,24 +61,22 @@ const styles = {
     border: `1px solid ${theme.colors.grey[300]}`,
     fontSize: theme.typography.fontSize.md
   },
-  select: {
-    width: '100%',
-    padding: theme.spacing.md,
-    borderRadius: theme.borderRadius.md,
-    border: `1px solid ${theme.colors.grey[300]}`,
-    backgroundColor: 'white',
-    fontSize: theme.typography.fontSize.md
-  },
-  checkbox: {
+  statDisplay: {
     display: 'flex',
     alignItems: 'center',
-    gap: theme.spacing.sm,
-    marginBottom: theme.spacing.sm
+    padding: theme.spacing.md,
+    backgroundColor: theme.colors.primary.light + '10',
+    borderRadius: theme.borderRadius.md,
+    marginBottom: theme.spacing.lg
   },
-  checkboxLabel: {
-    fontSize: theme.typography.fontSize.md,
-    color: theme.colors.text.primary,
-    cursor: 'pointer'
+  statLabel: {
+    fontWeight: theme.typography.fontWeight.medium,
+    marginRight: theme.spacing.md,
+    color: theme.colors.text.primary
+  },
+  statValue: {
+    fontWeight: theme.typography.fontWeight.bold,
+    color: theme.colors.primary.main,
   },
   buttonGroup: {
     display: 'flex',
@@ -138,52 +131,193 @@ const styles = {
   tableCell: {
     padding: theme.spacing.md,
     borderBottom: `1px solid ${theme.colors.grey[200]}`,
+  },
+  addDepartmentForm: {
+    display: 'flex',
+    gap: theme.spacing.md,
+    marginBottom: theme.spacing.xl
+  },
+  addButton: {
+    backgroundColor: theme.colors.primary.main,
+    color: 'white',
+    border: 'none',
+    padding: `${theme.spacing.sm} ${theme.spacing.md}`,
+    borderRadius: theme.borderRadius.md,
+    cursor: 'pointer'
+  },
+  removeButton: {
+    backgroundColor: theme.colors.error.main,
+    color: 'white',
+    border: 'none',
+    padding: '6px 12px',
+    borderRadius: theme.borderRadius.sm,
+    cursor: 'pointer'
+  },
+  loadingSpinner: {
+    width: '20px',
+    height: '20px',
+    border: `2px solid ${theme.colors.grey[200]}`,
+    borderTop: `2px solid ${theme.colors.primary.main}`,
+    borderRadius: '50%',
+    animation: 'spin 1s linear infinite',
+    marginRight: theme.spacing.sm
   }
 };
 
 const AdminSettings = () => {
   const navigate = useNavigate();
   const [saved, setSaved] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [statsLoading, setStatsLoading] = useState(true);
   
   // Estados para as configurações
-  const [generalSettings, setGeneralSettings] = useState({
-    companyName: 'ProfitLabs',
-    feedbackFrequency: 'weekly',
-    reminderDay: 'friday',
-    allowAnonymous: true,
-    requireApproval: false
-  });
+  const [companyName, setCompanyName] = useState('ProfitLabs');
+  const [responseRate, setResponseRate] = useState(0);
   
-  // Lista de departamentos para demonstração
-  const [departments, setDepartments] = useState([
-    { id: 1, name: 'Gestão', manager: 'Maria Santos', memberCount: 5 },
-    { id: 2, name: 'TI', manager: 'João Silva', memberCount: 12 },
-    { id: 3, name: 'Copywriter', manager: 'Ana Oliveira', memberCount: 6 },
-    { id: 4, name: 'Gestão de Tráfego', manager: 'Roberto Alves', memberCount: 8 },
-    { id: 5, name: 'Edição de Vídeo', manager: 'Lucas Mendes', memberCount: 4 },
-    { id: 6, name: 'Email Marketing', manager: 'Carolina Costa', memberCount: 3 },
-    { id: 7, name: 'Assistentes', manager: 'Fernanda Sousa', memberCount: 7 }
-  ]);
+  // Estado para novo departamento
+  const [newDepartment, setNewDepartment] = useState('');
   
-  // Handler para mudanças nas configurações gerais
-  const handleGeneralChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setGeneralSettings({
-      ...generalSettings,
-      [name]: type === 'checkbox' ? checked : value
-    });
+  // Lista de departamentos
+  const [departments, setDepartments] = useState([]);
+  const [departmentLoading, setDepartmentLoading] = useState(false);
+  const [departmentActionId, setDepartmentActionId] = useState(null);
+  
+  // Buscar configurações iniciais
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        // Carregar nome da empresa do localStorage
+        const savedCompanyName = localStorage.getItem('companyName');
+        if (savedCompanyName) {
+          setCompanyName(savedCompanyName);
+        } else {
+          // Valor padrão se não tiver sido salvo ainda
+          setCompanyName('ProfitLabs');
+          localStorage.setItem('companyName', 'ProfitLabs');
+        }
+
+        // Simulação de chamada para API para taxa de resposta
+        setTimeout(() => {
+          setResponseRate(72);
+          setStatsLoading(false);
+        }, 1000);
+      } catch (error) {
+        console.error('Erro ao carregar configurações:', error);
+        setStatsLoading(false);
+      }
+    };
+    
+    // Buscar departamentos
+    const fetchDepartments = async () => {
+      try {
+        setDepartmentLoading(true);
+        
+        // Carregar departamentos do localStorage
+        const savedDepartments = localStorage.getItem('departments');
+        
+        if (savedDepartments) {
+          // Usar departamentos salvos se existirem
+          setDepartments(JSON.parse(savedDepartments));
+          setDepartmentLoading(false);
+        } else {
+          // Dados iniciais padrão se não houver nada salvo
+          const defaultDepartments = [
+            { id: 1, name: 'Gestão Empresarial' },
+            { id: 2, name: 'TI' },
+            { id: 3, name: 'Copywriters' },
+            { id: 4, name: 'Gestão de Tráfego' },
+            { id: 5, name: 'Edição de Vídeo' },
+            { id: 6, name: 'Email Marketing' },
+            { id: 7, name: 'Assistentes' }
+          ];
+          
+          setDepartments(defaultDepartments);
+          localStorage.setItem('departments', JSON.stringify(defaultDepartments));
+          setDepartmentLoading(false);
+        }
+      } catch (error) {
+        console.error('Erro ao carregar departamentos:', error);
+        setDepartmentLoading(false);
+      }
+    };
+    
+    fetchSettings();
+    fetchDepartments();
+  }, []);
+  
+  // Adicionar departamento
+  const handleAddDepartment = () => {
+    if (!newDepartment.trim()) return;
+    
+    setDepartmentLoading(true);
+    
+    // Simulação da chamada para API
+    setTimeout(() => {
+      // Gerar ID único (em produção, o backend faria isso)
+      const id = Math.max(...departments.map(d => d.id), 0) + 1;
+      
+      // Criar novo array de departamentos
+      const updatedDepartments = [...departments, { id, name: newDepartment }];
+      
+      // Atualizar estado
+      setDepartments(updatedDepartments);
+      
+      // Salvar no localStorage para persistência
+      localStorage.setItem('departments', JSON.stringify(updatedDepartments));
+      
+      // Limpar campo
+      setNewDepartment('');
+      setDepartmentLoading(false);
+      
+      // Mostrar feedback visual
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    }, 800);
   };
   
-  // Simulação de salvar as configurações
-  const handleSave = () => {
-    // Aqui você implementaria a lógica para salvar no backend
-    console.log('Salvando configurações:', { generalSettings });
+  // Remover departamento
+  const handleRemoveDepartment = (id) => {
+    setDepartmentActionId(id);
+    setDepartmentLoading(true);
     
-    setSaved(true);
-    
+    // Simulação da chamada para API
     setTimeout(() => {
-      setSaved(false);
-    }, 3000);
+      // Filtrar para remover o departamento
+      const updatedDepartments = departments.filter(dept => dept.id !== id);
+      
+      // Atualizar estado
+      setDepartments(updatedDepartments);
+      
+      // Salvar no localStorage para persistência
+      localStorage.setItem('departments', JSON.stringify(updatedDepartments));
+      
+      setDepartmentLoading(false);
+      setDepartmentActionId(null);
+      
+      // Mostrar feedback visual
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    }, 800);
+  };
+  
+  // Salvar configurações gerais
+  const handleSave = () => {
+    setLoading(true);
+    
+    // Simulação de chamada para API
+    setTimeout(() => {
+      // Salvar nome da empresa no localStorage
+      localStorage.setItem('companyName', companyName);
+      
+      console.log('Salvando configurações:', { companyName });
+      
+      setLoading(false);
+      setSaved(true);
+      
+      setTimeout(() => {
+        setSaved(false);
+      }, 3000);
+    }, 800);
   };
   
   return (
@@ -209,155 +343,115 @@ const AdminSettings = () => {
         <div style={styles.settingsCard}>
           <h2 style={styles.cardTitle}>Configurações Gerais</h2>
           
-          <div style={styles.formGrid}>
-            <div style={styles.formGroup}>
-              <label style={styles.label} htmlFor="companyName">Nome da Empresa</label>
-              <input
-                type="text"
-                id="companyName"
-                name="companyName"
-                value={generalSettings.companyName}
-                onChange={handleGeneralChange}
-                style={styles.input}
-              />
-            </div>
-            
-            <div style={styles.formGroup}>
-              <label style={styles.label} htmlFor="feedbackFrequency">Frequência do Feedback</label>
-              <select
-                id="feedbackFrequency"
-                name="feedbackFrequency"
-                value={generalSettings.feedbackFrequency}
-                onChange={handleGeneralChange}
-                style={styles.select}
-              >
-                <option value="daily">Diário</option>
-                <option value="weekly">Semanal</option>
-                <option value="biweekly">Quinzenal</option>
-                <option value="monthly">Mensal</option>
-              </select>
-            </div>
-            
-            <div style={styles.formGroup}>
-              <label style={styles.label} htmlFor="reminderDay">Dia do Lembrete</label>
-              <select
-                id="reminderDay"
-                name="reminderDay"
-                value={generalSettings.reminderDay}
-                onChange={handleGeneralChange}
-                style={styles.select}
-              >
-                <option value="monday">Segunda-feira</option>
-                <option value="tuesday">Terça-feira</option>
-                <option value="wednesday">Quarta-feira</option>
-                <option value="thursday">Quinta-feira</option>
-                <option value="friday">Sexta-feira</option>
-              </select>
-            </div>
-            
-            <div style={styles.formGroup}>
-              <label style={styles.label}>Opções Adicionais</label>
-              
-              <div style={styles.checkbox}>
-                <input
-                  type="checkbox"
-                  id="allowAnonymous"
-                  name="allowAnonymous"
-                  checked={generalSettings.allowAnonymous}
-                  onChange={handleGeneralChange}
-                />
-                <label style={styles.checkboxLabel} htmlFor="allowAnonymous">
-                  Permitir feedback anônimo
-                </label>
-              </div>
-              
-              <div style={styles.checkbox}>
-                <input
-                  type="checkbox"
-                  id="requireApproval"
-                  name="requireApproval"
-                  checked={generalSettings.requireApproval}
-                  onChange={handleGeneralChange}
-                />
-                <label style={styles.checkboxLabel} htmlFor="requireApproval">
-                  Exigir aprovação para feedback público
-                </label>
-              </div>
-            </div>
+          <div style={styles.formGroup}>
+            <label style={styles.label} htmlFor="companyName">Nome da Empresa</label>
+            <input
+              type="text"
+              id="companyName"
+              name="companyName"
+              value={companyName}
+              onChange={(e) => setCompanyName(e.target.value)}
+              style={styles.input}
+            />
+          </div>
+          
+          <div style={styles.statDisplay}>
+            <span style={styles.statLabel}>Taxa de Resposta de Feedback:</span>
+            <span style={styles.statValue}>
+              {statsLoading ? (
+                <span style={styles.loadingSpinner}></span>
+              ) : (
+                `${responseRate}%`
+              )}
+            </span>
           </div>
         </div>
         
         <div style={styles.settingsCard}>
           <h2 style={styles.cardTitle}>Gerenciamento de Departamentos</h2>
           
+          <div style={styles.addDepartmentForm}>
+            <input
+              type="text"
+              placeholder="Novo departamento"
+              value={newDepartment}
+              onChange={(e) => setNewDepartment(e.target.value)}
+              style={{ ...styles.input, flex: 1 }}
+              disabled={departmentLoading}
+            />
+            <button 
+              style={styles.addButton}
+              onClick={handleAddDepartment}
+              disabled={departmentLoading || !newDepartment.trim()}
+            >
+              {departmentLoading ? (
+                <span style={styles.loadingSpinner}></span>
+              ) : 'Adicionar'}
+            </button>
+          </div>
+          
           <div style={{
             overflowX: 'auto',
             marginBottom: theme.spacing.lg
           }}>
-            <table style={{
-              width: '100%',
-              borderCollapse: 'collapse',
-              fontSize: theme.typography.fontSize.md
-            }}>
-              <thead>
-                <tr>
-                  <th style={styles.tableHeader}>Nome do Departamento</th>
-                  <th style={styles.tableHeader}>Gerente</th>
-                  <th style={styles.tableHeader}>Número de Membros</th>
-                  <th style={styles.tableHeader}>Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {departments.map(dept => (
-                  <tr key={dept.id}>
-                    <td style={styles.tableCell}>{dept.name}</td>
-                    <td style={styles.tableCell}>{dept.manager}</td>
-                    <td style={styles.tableCell}>{dept.memberCount}</td>
-                    <td style={styles.tableCell}>
-                      <button 
-                        style={{
-                          backgroundColor: theme.colors.primary.main,
-                          color: 'white',
-                          border: 'none',
-                          padding: '6px 12px',
-                          borderRadius: theme.borderRadius.sm,
-                          marginRight: theme.spacing.sm,
-                          cursor: 'pointer'
-                        }}
-                      >
-                        Editar
-                      </button>
-                      <button 
-                        style={{
-                          backgroundColor: 'white',
-                          color: theme.colors.error.main,
-                          border: `1px solid ${theme.colors.error.main}`,
-                          padding: '6px 12px',
-                          borderRadius: theme.borderRadius.sm,
-                          cursor: 'pointer'
-                        }}
-                      >
-                        Remover
-                      </button>
-                    </td>
+            {departmentLoading && !departmentActionId && (
+              <div style={{ textAlign: 'center', padding: '20px' }}>
+                <div style={{ ...styles.loadingSpinner, margin: '0 auto', width: '30px', height: '30px' }}></div>
+                <p style={{ marginTop: '10px', color: theme.colors.text.secondary }}>Carregando departamentos...</p>
+                <style>{`
+                  @keyframes spin {
+                    0% { transform: rotate(0deg); }
+                    100% { transform: rotate(360deg); }
+                  }
+                `}</style>
+              </div>
+            )}
+            
+            {!departmentLoading && departments.length === 0 && (
+              <div style={{ 
+                textAlign: 'center', 
+                padding: '20px',
+                color: theme.colors.text.secondary,
+                backgroundColor: theme.colors.grey[50],
+                borderRadius: theme.borderRadius.md
+              }}>
+                Nenhum departamento cadastrado. Adicione o primeiro!
+              </div>
+            )}
+            
+            {departments.length > 0 && (
+              <table style={{
+                width: '100%',
+                borderCollapse: 'collapse',
+                fontSize: theme.typography.fontSize.md
+              }}>
+                <thead>
+                  <tr>
+                    <th style={styles.tableHeader}>Nome do Departamento</th>
+                    <th style={{ ...styles.tableHeader, width: '100px', textAlign: 'center' }}>Ações</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {departments.map(dept => (
+                    <tr key={dept.id}>
+                      <td style={styles.tableCell}>{dept.name}</td>
+                      <td style={{ ...styles.tableCell, textAlign: 'center' }}>
+                        <button 
+                          style={styles.removeButton}
+                          onClick={() => handleRemoveDepartment(dept.id)}
+                          disabled={departmentLoading}
+                        >
+                          {departmentLoading && departmentActionId === dept.id ? (
+                            <span style={{ ...styles.loadingSpinner, width: '12px', height: '12px', margin: 0 }}></span>
+                          ) : 'Remover'}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
-          
-          <button 
-            style={{
-              backgroundColor: theme.colors.primary.main,
-              color: 'white',
-              border: 'none',
-              padding: `${theme.spacing.sm} ${theme.spacing.md}`,
-              borderRadius: theme.borderRadius.md,
-              cursor: 'pointer'
-            }}
-          >
-            Adicionar Departamento
-          </button>
         </div>
         
         <div style={styles.buttonGroup}>
@@ -370,8 +464,14 @@ const AdminSettings = () => {
           <button 
             style={styles.saveButton}
             onClick={handleSave}
+            disabled={loading}
           >
-            Salvar Configurações
+            {loading ? (
+              <>
+                <span style={{ ...styles.loadingSpinner, marginRight: '8px' }}></span>
+                Salvando...
+              </>
+            ) : 'Salvar Configurações'}
           </button>
         </div>
       </div>

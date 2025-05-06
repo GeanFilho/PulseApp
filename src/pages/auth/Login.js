@@ -3,8 +3,9 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 
-// Estilos inline para o componente de login
+// Estilos para a versão desktop e mobile
 const styles = {
+  // Container principal - vai ser ajustado com media queries
   container: {
     minHeight: '100vh',
     display: 'flex',
@@ -13,19 +14,81 @@ const styles = {
     background: 'linear-gradient(to bottom right, #eef2ff, #e0e7ff)',
     padding: '20px'
   },
+  
+  // Container da versão desktop - lado a lado
+  desktopContainer: {
+    display: 'flex',
+    width: '900px',
+    maxWidth: '100%',
+    boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+    borderRadius: '12px',
+    overflow: 'hidden'
+  },
+  
+  // Imagem lateral para desktop
+  desktopImage: {
+    flex: '1',
+    backgroundColor: '#4f46e5',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    color: 'white',
+    padding: '40px'
+  },
+  
+  desktopImageLogo: {
+    width: '80px',
+    height: '80px',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: '50%',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: '30px'
+  },
+  
+  desktopImageHeading: {
+    fontSize: '28px',
+    fontWeight: 'bold',
+    marginBottom: '16px',
+    textAlign: 'center'
+  },
+  
+  desktopImageText: {
+    fontSize: '16px',
+    textAlign: 'center',
+    opacity: '0.9',
+    lineHeight: '1.5'
+  },
+  
+  // Container do formulário - usado nas duas versões
   formContainer: {
     backgroundColor: 'white',
-    borderRadius: '12px',
     padding: '40px',
-    boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
     width: '100%',
-    maxWidth: '400px'
+    flex: '1',
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'center'
   },
+  
+  // Mobile formulário - ocupa toda a tela
+  mobileFormContainer: {
+    width: '100%',
+    maxWidth: '400px',
+    backgroundColor: 'white',
+    boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+    borderRadius: '12px',
+    padding: '30px'
+  },
+  
   logoContainer: {
     display: 'flex',
     justifyContent: 'center',
     marginBottom: '24px'
   },
+  
   logoIcon: {
     width: '64px',
     height: '64px',
@@ -35,6 +98,7 @@ const styles = {
     alignItems: 'center',
     justifyContent: 'center'
   },
+  
   title: {
     fontSize: '24px',
     fontWeight: 'bold',
@@ -42,15 +106,18 @@ const styles = {
     marginBottom: '8px',
     color: '#111827'
   },
+  
   subtitle: {
     fontSize: '14px',
     textAlign: 'center',
     color: '#6b7280',
     marginBottom: '32px'
   },
+  
   formGroup: {
     marginBottom: '20px'
   },
+  
   label: {
     display: 'block',
     marginBottom: '8px',
@@ -58,6 +125,7 @@ const styles = {
     fontWeight: '500',
     color: '#374151'
   },
+  
   input: {
     width: '100%',
     padding: '12px',
@@ -65,6 +133,7 @@ const styles = {
     border: '1px solid #d1d5db',
     fontSize: '16px'
   },
+  
   button: {
     width: '100%',
     padding: '12px',
@@ -76,10 +145,12 @@ const styles = {
     cursor: 'pointer',
     marginTop: '8px'
   },
+  
   buttonDisabled: {
     opacity: '0.7',
     cursor: 'not-allowed'
   },
+  
   error: {
     backgroundColor: '#fee2e2',
     borderLeft: '4px solid #ef4444',
@@ -88,44 +159,53 @@ const styles = {
     marginBottom: '16px',
     borderRadius: '4px'
   },
+  
   flexBetween: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: '16px'
   },
+  
   checkboxContainer: {
     display: 'flex',
     alignItems: 'center'
   },
+  
   checkbox: {
     marginRight: '8px'
   },
+  
   checkboxLabel: {
     fontSize: '14px',
     color: '#374151'
   },
+  
   forgotPassword: {
     fontSize: '14px',
     color: '#4f46e5',
     textDecoration: 'none'
   },
+  
   demoSection: {
     marginTop: '24px',
     textAlign: 'center',
     borderTop: '1px solid #e5e7eb',
     paddingTop: '16px'
   },
+  
   demoText: {
     fontSize: '12px',
     color: '#6b7280',
     marginBottom: '8px'
   },
+  
   demoButtons: {
     display: 'flex',
     gap: '8px',
     justifyContent: 'center'
   },
+  
   demoButton: {
     fontSize: '12px',
     padding: '8px',
@@ -135,17 +215,20 @@ const styles = {
     cursor: 'pointer',
     color: '#374151'
   },
+  
   registerSection: {
     marginTop: '24px',
     textAlign: 'center',
     borderTop: '1px solid #e5e7eb',
     paddingTop: '16px'
   },
+  
   registerText: {
     fontSize: '14px',
     color: '#6b7280',
     marginBottom: '12px'
   },
+  
   registerLink: {
     display: 'inline-block',
     padding: '10px 20px',
@@ -165,11 +248,28 @@ const Login = () => {
   const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
   
   const navigate = useNavigate();
   
   // Use o hook useAuth para acessar o contexto
   const { login } = useAuth();
+  
+  // Efeito para detectar mudanças no tamanho da tela
+  React.useEffect(() => {
+    const handleResize = () => {
+      setWindowWidth(window.innerWidth);
+    };
+    
+    window.addEventListener('resize', handleResize);
+    
+    // Cleanup
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, []);
+  
+  const isDesktop = windowWidth >= 768; // Ponto de quebra para desktop
   
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -213,111 +313,144 @@ const Login = () => {
     }
   };
 
+  // Conteúdo do formulário de login
+  const loginForm = (
+    <>
+      <div style={styles.logoContainer}>
+        <div style={styles.logoIcon}>
+          <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 20 20" fill="white">
+            <path d="M5.5 16a3.5 3.5 0 01-.369-6.98 4 4 0 117.753-1.977A4.5 4.5 0 1113.5 16h-8z" />
+          </svg>
+        </div>
+      </div>
+      
+      <h2 style={styles.title}>Pulse</h2>
+      <p style={styles.subtitle}>Faça login para acessar seu espaço</p>
+      
+      <form onSubmit={handleSubmit}>
+        {error && <div style={styles.error}>{error}</div>}
+        
+        <div style={styles.formGroup}>
+          <label style={styles.label} htmlFor="email">Email</label>
+          <input
+            id="email"
+            type="email"
+            style={styles.input}
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="seu@email.com"
+          />
+        </div>
+        
+        <div style={styles.formGroup}>
+          <label style={styles.label} htmlFor="password">Senha</label>
+          <input
+            id="password"
+            type="password"
+            style={styles.input}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="********"
+          />
+        </div>
+        
+        <div style={styles.flexBetween}>
+          <div style={styles.checkboxContainer}>
+            <input
+              type="checkbox"
+              id="remember"
+              style={styles.checkbox}
+              checked={rememberMe}
+              onChange={(e) => setRememberMe(e.target.checked)}
+            />
+            <label style={styles.checkboxLabel} htmlFor="remember">Lembrar-me</label>
+          </div>
+          
+          <a href="#" style={styles.forgotPassword}>Esqueceu a senha?</a>
+        </div>
+        
+        <button
+          type="submit"
+          style={{
+            ...styles.button,
+            ...(loading ? styles.buttonDisabled : {})
+          }}
+          disabled={loading}
+        >
+          {loading ? 'Processando...' : 'Entrar'}
+        </button>
+      </form>
+      
+      <div style={styles.demoSection}>
+        <p style={styles.demoText}>Demo (para fins de teste):</p>
+        <div style={styles.demoButtons}>
+          <button
+            style={styles.demoButton}
+            onClick={() => handleDemoLogin('admin')}
+            type="button"
+          >
+            Login como Admin
+          </button>
+          <button
+            style={styles.demoButton}
+            onClick={() => handleDemoLogin('employee')}
+            type="button"
+          >
+            Login como Funcionário
+          </button>
+        </div>
+      </div>
+      
+      <div style={styles.registerSection}>
+        <p style={styles.registerText}>
+          Ainda não tem uma conta?
+        </p>
+        <Link 
+          to="/register" 
+          style={styles.registerLink}
+          onMouseOver={(e) => {
+            e.currentTarget.style.backgroundColor = '#e5e7eb';
+          }}
+          onMouseOut={(e) => {
+            e.currentTarget.style.backgroundColor = '#f3f4f6';
+          }}
+        >
+          Criar uma conta
+        </Link>
+      </div>
+    </>
+  );
+
+  // Interface desktop com duas colunas
+  if (isDesktop) {
+    return (
+      <div style={styles.container}>
+        <div style={styles.desktopContainer}>
+          <div style={styles.desktopImage}>
+            <div style={styles.desktopImageLogo}>
+              <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 20 20" fill="white">
+                <path d="M5.5 16a3.5 3.5 0 01-.369-6.98 4 4 0 117.753-1.977A4.5 4.5 0 1113.5 16h-8z" />
+              </svg>
+            </div>
+            <h2 style={styles.desktopImageHeading}>Bem-vindo ao Pulse</h2>
+            <p style={styles.desktopImageText}>
+              Sua plataforma completa para monitoramento de clima organizacional.
+              Acompanhe o progresso da sua equipe e mantenha todos motivados.
+            </p>
+          </div>
+          <div style={styles.formContainer}>
+            {loginForm}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Interface mobile simplificada
   return (
     <div style={styles.container}>
-      <div style={styles.formContainer}>
-        <div style={styles.logoContainer}>
-          <div style={styles.logoIcon}>
-            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 20 20" fill="white">
-              <path d="M5.5 16a3.5 3.5 0 01-.369-6.98 4 4 0 117.753-1.977A4.5 4.5 0 1113.5 16h-8z" />
-            </svg>
-          </div>
-        </div>
-        
-        <h2 style={styles.title}>Pulse</h2>
-        <p style={styles.subtitle}>Faça login para acessar seu espaço</p>
-        
-        <form onSubmit={handleSubmit}>
-          {error && <div style={styles.error}>{error}</div>}
-          
-          <div style={styles.formGroup}>
-            <label style={styles.label} htmlFor="email">Email</label>
-            <input
-              id="email"
-              type="email"
-              style={styles.input}
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="seu@email.com"
-            />
-          </div>
-          
-          <div style={styles.formGroup}>
-            <label style={styles.label} htmlFor="password">Senha</label>
-            <input
-              id="password"
-              type="password"
-              style={styles.input}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="********"
-            />
-          </div>
-          
-          <div style={styles.flexBetween}>
-            <div style={styles.checkboxContainer}>
-              <input
-                type="checkbox"
-                id="remember"
-                style={styles.checkbox}
-                checked={rememberMe}
-                onChange={(e) => setRememberMe(e.target.checked)}
-              />
-              <label style={styles.checkboxLabel} htmlFor="remember">Lembrar-me</label>
-            </div>
-            
-            <a href="#" style={styles.forgotPassword}>Esqueceu a senha?</a>
-          </div>
-          
-          <button
-            type="submit"
-            style={{
-              ...styles.button,
-              ...(loading ? styles.buttonDisabled : {})
-            }}
-            disabled={loading}
-          >
-            {loading ? 'Processando...' : 'Entrar'}
-          </button>
-        </form>
-        
-        <div style={styles.demoSection}>
-          <p style={styles.demoText}>Demo (para fins de teste):</p>
-          <div style={styles.demoButtons}>
-            <button
-              style={styles.demoButton}
-              onClick={() => handleDemoLogin('admin')}
-              type="button"
-            >
-              Login como Admin
-            </button>
-            <button
-              style={styles.demoButton}
-              onClick={() => handleDemoLogin('employee')}
-              type="button"
-            >
-              Login como Funcionário
-            </button>
-          </div>
-        </div>
-        
-        <div style={styles.registerSection}>
-          <p style={styles.registerText}>
-            Ainda não tem uma conta?
-          </p>
-          <Link 
-            to="/register" 
-            style={styles.registerLink}
-            onMouseOver={(e) => {
-              e.currentTarget.style.backgroundColor = '#e5e7eb';
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.backgroundColor = '#f3f4f6';
-            }}
-          >
-            Criar uma conta
-          </Link>
-        </div>
+      <div style={styles.mobileFormContainer}>
+        {loginForm}
       </div>
     </div>
   );

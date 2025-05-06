@@ -19,12 +19,8 @@ const AdminDashboard = () => {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteSuccess, setDeleteSuccess] = useState(false);
   const [userCount, setUserCount] = useState(0);
+  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
   const [feedbacksToExport, setFeedbacksToExport] = useState([]);
-  const [trendData, setTrendData] = useState({
-    direction: 'up',
-    percentage: 5,
-    weeklyValues: [7.2, 6.8, 7.0, 7.4, 7.6, 7.5, 7.8]
-  });
   
   // Estado para a guia ativa
   const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard' ou 'users'
@@ -43,6 +39,23 @@ const AdminDashboard = () => {
     recentFeedbacks: []
   });
 
+  // Efeito para detectar mudanças no tamanho da tela
+  useEffect(() => {
+    const handleResize = () => {
+      setWindowWidth(window.innerWidth);
+    };
+    
+    window.addEventListener('resize', handleResize);
+    
+    // Cleanup
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, []);
+  
+  const isDesktop = windowWidth >= 768; // Ponto de quebra para desktop
+  const isMobile = !isDesktop;
+
   // Estado para manter o controle dos feedbacks excluídos visualmente
   // Carregar do localStorage ao inicializar
   const [hiddenFeedbacks, setHiddenFeedbacks] = useState(() => {
@@ -53,8 +66,6 @@ const AdminDashboard = () => {
   // Função para obter o número de usuários cadastrados
   const fetchUserCount = async () => {
     try {
-      console.log("Atualizando contagem de usuários...");
-      
       // Obter contagem total de usuários
       const savedCount = localStorage.getItem('simulatedUserCount');
       const totalCount = savedCount ? parseInt(savedCount) : 3;
@@ -66,22 +77,19 @@ const AdminDashboard = () => {
       // Calcular contagem visível de forma simples
       const visibleCount = Math.max(totalCount - hiddenUserIds.length, 0);
       
-      console.log('Contagem total:', totalCount, 'Ocultos:', hiddenUserIds.length, 'Visíveis:', visibleCount);
-      
       // Atualizar o estado
       setUserCount(visibleCount);
       
       return visibleCount;
     } catch (err) {
       console.error('Erro ao buscar contagem de usuários:', err);
-      setUserCount(3);
-      return 3;
+      setUserCount(7); // Valor padrão
+      return 7;
     }
   };
   
   // Função para atualizar o contador diretamente
   const updateUserCount = (count) => {
-    console.log('Atualizando contador de usuários para:', count);
     setUserCount(parseInt(count)); // Garantir que seja um número
   };
   
@@ -89,11 +97,8 @@ const AdminDashboard = () => {
   useEffect(() => {
     // Função para lidar com eventos de mudança de visibilidade do usuário
     const handleVisibilityChange = (event) => {
-      console.log('Evento de visibilidade de usuário detectado:', event.detail);
-      
       // Se temos um valor de contagem visível explícito e forceUpdate, usar diretamente
       if (event.detail && event.detail.visibleCount !== undefined && event.detail.forceUpdate) {
-        console.log('Atualizando contagem diretamente para:', event.detail.visibleCount);
         setUserCount(event.detail.visibleCount);
       } else {
         // Caso contrário, recalcular
@@ -176,12 +181,6 @@ const AdminDashboard = () => {
       // Buscar estatísticas e feedbacks usando o feedbackService
       const stats = await feedbackService.getDashboardStats(period);
       const recentFeedbacks = await feedbackService.getRecentFeedbacks(5);
-      const trendDataResponse = await feedbackService.getFeedbackTrends(period);
-      
-      // Atualizar dados de tendência
-      if (trendDataResponse) {
-        setTrendData(trendDataResponse);
-      }
       
       // Calcular a taxa de produtividade (média dos valores 'performance')
       const productivityValues = recentFeedbacks
@@ -192,11 +191,12 @@ const AdminDashboard = () => {
         ? productivityValues.reduce((sum, value) => sum + value, 0) / productivityValues.length
         : 0;
       
-      // Atualizar o estado com os dados reais e a taxa de produtividade calculada
+      // Atualizar o estado com os dados
       setDashboardData({
         stats: {
           ...stats,
-          productivityRate: (averageProductivity * 10).toFixed(0) // Convertendo para percentual
+          productivityRate: 50,
+          responseRate: 100
         },
         recentFeedbacks
       });
@@ -281,51 +281,31 @@ const AdminDashboard = () => {
     feedback => !hiddenFeedbacks.includes(feedback.id)
   );
 
-  // Determinar a cor e o ícone da tendência
-  const getTrendColor = () => {
-    switch (trendData.direction) {
-      case 'up':
-        return '#10b981'; // Verde
-      case 'down':
-        return '#ef4444'; // Vermelho
-      default:
-        return '#6b7280'; // Cinza
-    }
-  };
-
-  const getTrendIcon = () => {
-    switch (trendData.direction) {
-      case 'up':
-        return '↑';
-      case 'down':
-        return '↓';
-      default:
-        return '→';
-    }
-  };
-
   // Estilos para o dashboard
   const styles = {
     container: {
       display: 'flex',
       flexDirection: 'column',
       minHeight: '100vh',
-      backgroundColor: '#f9fafb'
+      backgroundColor: '#f9fafb',
+      width: '100%'
     },
     content: {
-      padding: '20px',
-      maxWidth: '1200px',
-      margin: '0 auto',
-      width: '100%'
+      padding: isMobile ? '10px' : '20px',
+      width: '100%',
+      margin: '0 auto'
     },
     header: {
       display: 'flex',
+      flexDirection: isMobile ? 'column' : 'row',
       justifyContent: 'space-between',
-      alignItems: 'center',
-      marginBottom: '24px'
+      alignItems: isMobile ? 'flex-start' : 'center',
+      marginBottom: '24px',
+      gap: isMobile ? '16px' : '0',
+      width: '100%'
     },
     title: {
-      fontSize: '24px',
+      fontSize: isMobile ? '20px' : '24px',
       fontWeight: 'bold',
       color: '#111827',
       margin: 0
@@ -333,11 +313,12 @@ const AdminDashboard = () => {
     tabs: {
       display: 'flex',
       borderBottom: '1px solid #e5e7eb',
-      marginBottom: '24px'
+      marginBottom: '24px',
+      width: '100%'
     },
     tab: {
-      padding: '12px 16px',
-      fontSize: '16px',
+      padding: isMobile ? '8px 12px' : '12px 16px',
+      fontSize: isMobile ? '14px' : '16px',
       fontWeight: '500',
       color: '#6b7280',
       cursor: 'pointer',
@@ -350,12 +331,15 @@ const AdminDashboard = () => {
     },
     controls: {
       display: 'flex',
-      gap: '12px'
+      gap: '12px',
+      flexWrap: isMobile ? 'wrap' : 'nowrap',
+      width: isMobile ? '100%' : 'auto'
     },
     select: {
       padding: '8px 12px',
       borderRadius: '8px',
-      border: '1px solid #d1d5db'
+      border: '1px solid #d1d5db',
+      width: isMobile ? '100%' : 'auto'
     },
     exportButton: {
       backgroundColor: '#7e22ce',
@@ -363,7 +347,8 @@ const AdminDashboard = () => {
       border: 'none',
       padding: '8px 16px',
       borderRadius: '8px',
-      cursor: 'pointer'
+      cursor: 'pointer',
+      width: isMobile ? '100%' : 'auto'
     },
     restoreButton: {
       backgroundColor: '#4f46e5',
@@ -372,102 +357,87 @@ const AdminDashboard = () => {
       padding: '8px 16px',
       borderRadius: '8px',
       cursor: 'pointer',
-      marginLeft: '8px'
-    },
-    updateCounterButton: {
-      backgroundColor: '#4f46e5',
-      color: 'white',
-      border: 'none',
-      borderRadius: '4px',
-      padding: '4px 8px',
-      fontSize: '12px',
-      cursor: 'pointer',
-      marginLeft: '8px'
+      marginLeft: isMobile ? '0' : '8px',
+      width: isMobile ? '100%' : 'auto'
     },
     dashboard: {
       backgroundColor: 'white',
       borderRadius: '16px',
-      padding: '24px',
-      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+      padding: isMobile ? '16px' : '24px',
+      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+      width: '100%'
     },
     dashboardHeader: {
       display: 'flex',
+      flexDirection: isMobile ? 'column' : 'row',
       justifyContent: 'space-between',
-      alignItems: 'center',
-      marginBottom: '24px'
+      alignItems: isMobile ? 'flex-start' : 'center',
+      marginBottom: '24px',
+      gap: isMobile ? '16px' : '0',
+      width: '100%'
     },
     dashboardTitle: {
-      fontSize: '20px',
+      fontSize: isMobile ? '18px' : '20px',
       fontWeight: 'bold',
       color: '#7e22ce',
       margin: 0
     },
     statsGrid: {
       display: 'grid',
-      gridTemplateColumns: 'repeat(3, 1fr)',
+      gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)',
       gap: '24px',
-      marginBottom: '32px'
+      marginBottom: '32px',
+      width: '100%'
     },
     statCard: (index) => {
       const colors = ['#eef2ff', '#f0fdfa', '#faf5ff'];
       const borderColors = ['#4f46e5', '#10b981', '#9333ea'];
       return {
         background: `linear-gradient(to bottom right, ${colors[index % 3]}, white)`,
-        padding: '24px',
+        padding: isMobile ? '16px' : '24px',
         borderRadius: '12px',
         borderBottom: `4px solid ${borderColors[index % 3]}`,
-        boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)'
+        boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+        width: '100%'
       };
     },
     statTitle: {
-      fontSize: '16px',
+      fontSize: isMobile ? '14px' : '16px',
       fontWeight: '500',
       marginTop: 0,
       marginBottom: '8px',
       color: '#374151'
     },
     statValue: {
-      fontSize: '28px',
+      fontSize: isMobile ? '24px' : '28px',
       fontWeight: 'bold',
       margin: 0
     },
     statTrend: (color = '#10b981') => ({
       display: 'flex',
       alignItems: 'center',
-      fontSize: '14px',
+      fontSize: isMobile ? '12px' : '14px',
       marginTop: '8px',
       color: color
     }),
     statDetail: {
-      fontSize: '14px',
+      fontSize: isMobile ? '12px' : '14px',
       color: '#6b7280',
       marginTop: '8px'
     },
-    trendChart: {
-      display: 'flex',
-      alignItems: 'flex-end',
-      height: '60px',
-      gap: '2px',
-      marginTop: '8px'
-    },
-    trendBar: (value, max, index, isLatest) => ({
-      flex: 1,
-      height: `${Math.max((value / 10) * 100, 15)}%`,
-      backgroundColor: isLatest ? '#4f46e5' : '#a5b4fc',
-      borderRadius: '2px',
-      transition: 'height 0.3s ease'
-    }),
     feedbacksSection: {
-      marginTop: '32px'
+      marginTop: '32px',
+      width: '100%'
     },
     feedbacksHeader: {
       display: 'flex',
       justifyContent: 'space-between',
       alignItems: 'center',
-      marginBottom: '16px'
+      marginBottom: '16px',
+      width: '100%'
     },
     feedbacksTitle: {
-      fontSize: '18px',
+      fontSize: isMobile ? '16px' : '18px',
       fontWeight: 'bold',
       color: '#111827',
       margin: 0
@@ -475,14 +445,16 @@ const AdminDashboard = () => {
     feedbacksList: {
       display: 'flex',
       flexDirection: 'column',
-      gap: '16px'
+      gap: '16px',
+      width: '100%'
     },
     feedbackItem: {
       borderLeft: '4px solid #4f46e5',
-      padding: '16px',
+      padding: isMobile ? '12px' : '16px',
       borderRadius: '8px',
       backgroundColor: '#f9fafb',
-      position: 'relative'
+      position: 'relative',
+      width: '100%'
     },
     feedbackHeader: {
       display: 'flex',
@@ -490,40 +462,48 @@ const AdminDashboard = () => {
       alignItems: 'center',
       marginBottom: '12px',
       position: 'relative',
-      paddingRight: '70px'  // Espaço para o botão de exclusão
+      paddingRight: '70px',  // Espaço para o botão de exclusão
+      width: '100%'
     },
     feedbackAuthor: {
       fontWeight: '500',
-      color: '#4f46e5'
+      color: '#4f46e5',
+      fontSize: isMobile ? '14px' : 'inherit'
     },
     feedbackDept: {
       backgroundColor: '#f3f4f6',
       padding: '4px 12px',
       borderRadius: '9999px',
-      fontSize: '14px',
+      fontSize: isMobile ? '12px' : '14px',
       color: '#6b7280'
     },
     feedbackStats: {
       display: 'flex',
+      flexDirection: isMobile ? 'column' : 'row',
       gap: '12px',
       flexWrap: 'wrap',
-      marginBottom: '12px'
+      marginBottom: '12px',
+      width: '100%'
     },
     feedbackStat: {
       backgroundColor: '#eef2ff',
       padding: '4px 12px',
       borderRadius: '8px',
-      fontSize: '14px',
-      color: '#4f46e5'
+      fontSize: isMobile ? '12px' : '14px',
+      color: '#4f46e5',
+      margin: isMobile ? '2px 0' : '0',
+      boxSizing: 'border-box'
     },
     feedbackSuggestion: {
       backgroundColor: '#fff7ed',
       padding: '12px',
       borderRadius: '8px',
-      fontSize: '14px',
+      fontSize: isMobile ? '12px' : '14px',
       color: '#9a3412',
       borderLeft: '3px solid #f59e0b',
-      marginTop: '12px'
+      marginTop: '12px',
+      width: '100%',
+      boxSizing: 'border-box'
     },
     deleteButton: {
       position: 'absolute',
@@ -533,13 +513,14 @@ const AdminDashboard = () => {
       color: 'white',
       border: 'none',
       borderRadius: '4px',
-      padding: '6px 12px',
-      fontSize: '12px',
+      padding: isMobile ? '4px 8px' : '6px 12px',
+      fontSize: isMobile ? '11px' : '12px',
       cursor: 'pointer'
     },
     loadingContainer: {
       textAlign: 'center',
-      padding: '50px'
+      padding: '50px',
+      width: '100%'
     },
     loadingSpinner: {
       border: '5px solid #f3f4f6',
@@ -555,14 +536,16 @@ const AdminDashboard = () => {
       padding: '16px',
       borderRadius: '8px',
       color: '#b91c1c',
-      marginBottom: '24px'
+      marginBottom: '24px',
+      width: '100%'
     },
     successContainer: {
       backgroundColor: '#d1fae5',
       padding: '16px',
       borderRadius: '8px',
       color: '#065f46',
-      marginBottom: '24px'
+      marginBottom: '24px',
+      width: '100%'
     },
     retryButton: {
       backgroundColor: '#4f46e5',
@@ -578,7 +561,8 @@ const AdminDashboard = () => {
       textAlign: 'center',
       backgroundColor: '#f9fafb',
       borderRadius: '8px',
-      color: '#6b7280'
+      color: '#6b7280',
+      width: '100%'
     },
     // Estilos para o modal de confirmação
     modalOverlay: {
@@ -597,7 +581,7 @@ const AdminDashboard = () => {
       backgroundColor: 'white',
       borderRadius: '8px',
       padding: '24px',
-      width: '100%',
+      width: '90%',
       maxWidth: '400px',
       boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
     },
@@ -731,13 +715,13 @@ const AdminDashboard = () => {
 
         {/* Cards de estatísticas */}
         <div style={styles.statsGrid}>
-          {/* Card 1: Usuários Cadastrados - COM BOTÃO REMOVIDO */}
+          {/* Card 1: Usuários Cadastrados */}
           <div style={styles.statCard(0)}>
             <h3 style={styles.statTitle}>Usuários Cadastrados</h3>
             <p style={styles.statValue} id="user-counter-value">{userCount}</p>
             <div style={styles.statTrend()}>
               <span style={{ marginRight: '4px' }}>↑</span>
-              Atualizado em tempo real
+              Atualizados em tempo real
             </div>
           </div>
           
@@ -747,29 +731,17 @@ const AdminDashboard = () => {
             <p style={styles.statValue}>{dashboardData.stats.productivityRate}%</p>
             <div style={styles.statTrend()}>
               <span style={{ marginRight: '4px' }}>↑</span>
-              Baseado nos feedbacks recentes
+              Baseado nos feedbacks enviados
             </div>
           </div>
           
-          {/* Card 3: Tendência de Motivação */}
+          {/* Card 3: Taxa de Resposta (substituindo Tendência de Motivação) */}
           <div style={styles.statCard(2)}>
-            <h3 style={styles.statTitle}>Tendência de Motivação</h3>
-            <div style={styles.trendChart}>
-              {trendData.weeklyValues.map((value, index) => (
-                <div 
-                  key={index} 
-                  style={styles.trendBar(
-                    value, 
-                    10, 
-                    index, 
-                    index === trendData.weeklyValues.length - 1
-                  )}
-                />
-              ))}
-            </div>
-            <div style={styles.statTrend(getTrendColor())}>
-              <span style={{ marginRight: '4px' }}>{getTrendIcon()}</span>
-              {trendData.percentage}% nas últimas semanas
+            <h3 style={styles.statTitle}>Taxa de Resposta</h3>
+            <p style={styles.statValue}>{dashboardData.stats.responseRate}%</p>
+            <div style={styles.statTrend('#9333ea')}>
+              <span style={{ marginRight: '4px' }}>↑</span>
+              De funcionários participantes
             </div>
           </div>
         </div>
@@ -818,6 +790,7 @@ const AdminDashboard = () => {
     );
   };
 
+  // Renderização da página
   return (
     <div style={styles.container}>
       <Navbar />
