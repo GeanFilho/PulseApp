@@ -1,5 +1,5 @@
 // src/App.js
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 
@@ -10,6 +10,29 @@ import EmployeeDashboard from './pages/employee/Dashboard';
 import AdminDashboard from './pages/admin/Dashboard';
 import AdminSettings from './pages/admin/Settings';
 import ProfilePage from './pages/ProfilePage';
+
+// Função para inicializar os valores do localStorage necessários para o funcionamento correto
+const initializeAppData = () => {
+  // Inicializar a contagem de usuários simulados
+  if (!localStorage.getItem('simulatedUserCount') || isNaN(parseInt(localStorage.getItem('simulatedUserCount')))) {
+    console.log('Inicializando contagem de usuários simulados com valor padrão: 3');
+    localStorage.setItem('simulatedUserCount', '3');
+  } else {
+    console.log('Contagem de usuários simulados já existe:', localStorage.getItem('simulatedUserCount'));
+  }
+
+  // Inicializar a lista de usuários ocultos se não existir
+  if (!localStorage.getItem('hiddenUsers')) {
+    console.log('Inicializando lista de usuários ocultos');
+    localStorage.setItem('hiddenUsers', JSON.stringify([]));
+  }
+
+  // Inicializar a lista de feedbacks ocultos se não existir
+  if (!localStorage.getItem('hiddenFeedbacks')) {
+    console.log('Inicializando lista de feedbacks ocultos');
+    localStorage.setItem('hiddenFeedbacks', JSON.stringify([]));
+  }
+};
 
 // Componente para rotas protegidas
 const PrivateRoute = ({ element, requireAdmin = false }) => {
@@ -32,6 +55,11 @@ const PrivateRoute = ({ element, requireAdmin = false }) => {
 
 // Componente principal da aplicação
 function App() {
+  // Inicializar dados do aplicativo quando o componente for montado
+  useEffect(() => {
+    initializeAppData();
+  }, []);
+
   return (
     <Router>
       <AuthProvider>

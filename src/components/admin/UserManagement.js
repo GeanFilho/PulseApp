@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import apiService from '../../services/apiService';
 
-const UserManagement = () => {
+const UserManagement = ({ onUserVisibilityChange }) => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -62,21 +62,41 @@ const UserManagement = () => {
     setActionType('');
   };
 
-  // Função para salvar os usuários ocultos no localStorage e notificar outros componentes
-  const saveHiddenUsers = (hiddenIds) => {
-    const hiddenUsersString = JSON.stringify(hiddenIds);
-    localStorage.setItem('hiddenUsers', hiddenUsersString);
-    
-    // Disparar um evento personalizado para notificar outros componentes
-    document.dispatchEvent(new CustomEvent('userVisibilityChanged', {
-      detail: { hiddenUsers: hiddenIds }
-    }));
-    
-    // Também simular um evento de storage para compatibilidade
-    window.dispatchEvent(new StorageEvent('storage', {
-      key: 'hiddenUsers',
-      newValue: hiddenUsersString
-    }));
+  // Função para forçar atualização do contador
+  const forceUpdateCounter = () => {
+    try {
+      // Obter contagem total de usuários
+      const savedCount = localStorage.getItem('simulatedUserCount');
+      const totalCount = savedCount ? parseInt(savedCount) : 3;
+      
+      // Obter lista de usuários ocultos atualizada
+      const hiddenUserIds = hiddenUsers; // usar o estado atual já atualizado
+      
+      // Calcular nova contagem visível
+      const visibleCount = Math.max(totalCount - hiddenUserIds.length, 0);
+      
+      // Atualizar contador no localStorage
+      localStorage.setItem('visibleUserCount', visibleCount.toString());
+      
+      // Tentar atualizar o contador diretamente no DOM se possível
+      try {
+        const counterElement = document.getElementById('user-counter-value');
+        if (counterElement) {
+          counterElement.textContent = visibleCount;
+        }
+      } catch (domError) {
+        console.error('Erro ao atualizar contador no DOM:', domError);
+      }
+      
+      // Chamar o callback para atualizar o contador no Dashboard
+      if (typeof onUserVisibilityChange === 'function') {
+        onUserVisibilityChange(visibleCount);
+      }
+      
+      console.log('Contador atualizado forçadamente para:', visibleCount);
+    } catch (error) {
+      console.error('Erro ao forçar atualização do contador:', error);
+    }
   };
 
   // Função para ocultar um usuário
@@ -91,7 +111,7 @@ const UserManagement = () => {
       const updatedHiddenUsers = [...hiddenUsers, userToAction.id];
       setHiddenUsers(updatedHiddenUsers);
       
-      // Salva no localStorage para persistir entre recarregamentos e notificar outros componentes
+      // Salva no localStorage para persistir entre recarregamentos
       localStorage.setItem('hiddenUsers', JSON.stringify(updatedHiddenUsers));
       
       try {
@@ -102,22 +122,21 @@ const UserManagement = () => {
         // Continuamos mesmo se a API falhar, já que estamos em modo de desenvolvimento/simulação
       }
       
-      // Atualiza a contagem
+      // Forçar atualização do contador
+      forceUpdateCounter();
+      
+      // Disparar evento de forma direta e simples
       const event = new CustomEvent('userVisibilityChanged', {
-        detail: { 
-          hiddenUsers: updatedHiddenUsers,
-          action: 'hide',
-          userId: userToAction.id
-        }
+        detail: { action: 'hide' }
       });
       document.dispatchEvent(event);
       
-      // Fecha o modal de confirmação
+      // Fechar o modal de confirmação
       setActionConfirmOpen(false);
       setUserToAction(null);
       setActionSuccess(true);
       
-      // Exibe mensagem de sucesso por 2 segundos
+      // Exibir mensagem de sucesso por 2 segundos
       setTimeout(() => {
         setActionSuccess(false);
       }, 2000);
@@ -142,7 +161,7 @@ const UserManagement = () => {
       const updatedHiddenUsers = hiddenUsers.filter(id => id !== userToAction.id);
       setHiddenUsers(updatedHiddenUsers);
       
-      // Salva no localStorage para persistir entre recarregamentos e notificar outros componentes
+      // Salva no localStorage para persistir entre recarregamentos
       localStorage.setItem('hiddenUsers', JSON.stringify(updatedHiddenUsers));
       
       try {
@@ -153,22 +172,21 @@ const UserManagement = () => {
         // Continuamos mesmo se a API falhar, já que estamos em modo de desenvolvimento/simulação
       }
       
-      // Atualiza a contagem
+      // Forçar atualização do contador
+      forceUpdateCounter();
+      
+      // Disparar evento de forma direta e simples
       const event = new CustomEvent('userVisibilityChanged', {
-        detail: { 
-          hiddenUsers: updatedHiddenUsers,
-          action: 'show',
-          userId: userToAction.id
-        }
+        detail: { action: 'show' }
       });
       document.dispatchEvent(event);
       
-      // Fecha o modal de confirmação
+      // Fechar o modal de confirmação
       setActionConfirmOpen(false);
       setUserToAction(null);
       setActionSuccess(true);
       
-      // Exibe mensagem de sucesso por 2 segundos
+      // Exibir mensagem de sucesso por 2 segundos
       setTimeout(() => {
         setActionSuccess(false);
       }, 2000);
@@ -178,23 +196,6 @@ const UserManagement = () => {
       setActionError('Ocorreu um erro ao mostrar o usuário, mas a operação pode ter sido parcialmente bem-sucedida. Por favor, atualize a página para ver o estado atual.');
     } finally {
       setActionLoading(false);
-    }
-  };
-
-  // Função para atualizar a contagem de usuários (simula a API)
-  const updateUserCount = (change) => {
-    // Em um ambiente real, esta função seria substituída por uma chamada 
-    // à API para atualizar a contagem no servidor
-    const savedCount = localStorage.getItem('simulatedUserCount');
-    if (savedCount) {
-      const currentCount = parseInt(savedCount);
-      const newCount = Math.max(currentCount + change, 0); // Garantir que não vá abaixo de 0
-      localStorage.setItem('simulatedUserCount', newCount.toString());
-      
-      // Notificar mudança na contagem
-      document.dispatchEvent(new CustomEvent('userCountChanged', {
-        detail: { count: newCount }
-      }));
     }
   };
 
@@ -403,14 +404,6 @@ const UserManagement = () => {
       gap: '8px'
     },
     paginationButton: {
-      padding: '6px 12px',
-      borderRadius: '6px',
-      border: '1px solid #d1d5db',
-      backgroundColor: 'white',
-      color: 'black',
-
-      // Continuação do arquivo src/components/admin/UserManagement.js
-
       padding: '6px 12px',
       borderRadius: '6px',
       border: '1px solid #d1d5db',

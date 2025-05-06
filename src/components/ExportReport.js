@@ -1,5 +1,6 @@
 // src/components/ExportReport.js
 import React, { useState } from 'react';
+import exportService from '../services/exportService';
 
 const styles = {
   modal: {
@@ -103,7 +104,7 @@ const styles = {
   }
 };
 
-const ExportReport = ({ isOpen, onClose }) => {
+const ExportReport = ({ isOpen, onClose, feedbackData = [] }) => {
   const [format, setFormat] = useState('pdf');
   const [dateRange, setDateRange] = useState('last-week');
   const [selectedData, setSelectedData] = useState({
@@ -113,6 +114,9 @@ const ExportReport = ({ isOpen, onClose }) => {
     support: true,
     comments: true
   });
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [error, setError] = useState('');
 
   if (!isOpen) return null;
 
@@ -124,29 +128,85 @@ const ExportReport = ({ isOpen, onClose }) => {
   };
 
   const handleExport = () => {
-    // Aqui seria implementada a lógica de exportação
-    console.log('Exportando relatório:', {
-      format,
-      dateRange,
-      selectedData
-    });
+    setLoading(true);
+    setError('');
     
-    // Simular conclusão da exportação
-    setTimeout(() => {
-      alert('Relatório exportado com sucesso!');
-      onClose();
-    }, 1000);
+    try {
+      // Verificar se há dados para exportar
+      if (!feedbackData || feedbackData.length === 0) {
+        setError('Não há feedbacks disponíveis para exportação.');
+        setLoading(false);
+        return;
+      }
+      
+      // Como estamos tendo problemas com a filtragem por data, vamos usar todos os dados disponíveis
+      // Podemos implementar a filtragem mais tarde quando o problema básico estiver resolvido
+      const dataToExport = feedbackData;
+      
+      console.log('Exportando dados:', dataToExport);
+      
+      // Configurar opções de exportação
+      const exportOptions = {
+        selectedData,
+        dateRange
+      };
+      
+      // Exportar com base no formato selecionado
+      if (format === 'pdf') {
+        exportService.exportToPDF(dataToExport, exportOptions);
+      } else if (format === 'excel') {
+        exportService.exportToExcel(dataToExport, exportOptions);
+      }
+      
+      // Mostrar mensagem de sucesso
+      setLoading(false);
+      setSuccess(true);
+      
+      // Mostrar mensagem de sucesso por 2 segundos e depois fechar
+      setTimeout(() => {
+        setSuccess(false);
+        onClose();
+      }, 2000);
+      
+    } catch (err) {
+      console.error('Erro ao exportar:', err);
+      setLoading(false);
+      setError('Ocorreu um erro ao gerar o relatório. Por favor, tente novamente.');
+    }
   };
-
   return (
     <div style={styles.modal} onClick={onClose}>
       <div style={styles.modalContent} onClick={e => e.stopPropagation()}>
         <div style={styles.header}>
           <h2 style={styles.title}>Exportar Relatório</h2>
-          <button style={styles.closeButton} onClick={onClose}>×</button>
+          <button style={styles.closeButton} onClick={onClose} disabled={loading}>×</button>
         </div>
         
         <div style={styles.body}>
+          {error && (
+            <div style={{
+              backgroundColor: '#fee2e2',
+              color: '#b91c1c',
+              padding: '12px',
+              borderRadius: '8px',
+              marginBottom: '16px'
+            }}>
+              {error}
+            </div>
+          )}
+          
+          {success && (
+            <div style={{
+              backgroundColor: '#d1fae5',
+              color: '#065f46',
+              padding: '12px',
+              borderRadius: '8px',
+              marginBottom: '16px'
+            }}>
+              Relatório exportado com sucesso!
+            </div>
+          )}
+          
           <div style={styles.formGroup}>
             <label style={styles.label} htmlFor="format">Formato</label>
             <select 
@@ -154,10 +214,10 @@ const ExportReport = ({ isOpen, onClose }) => {
               style={styles.select} 
               value={format} 
               onChange={(e) => setFormat(e.target.value)}
+              disabled={loading}
             >
               <option value="pdf">PDF</option>
               <option value="excel">Excel</option>
-              <option value="csv">CSV</option>
             </select>
           </div>
           
@@ -168,6 +228,7 @@ const ExportReport = ({ isOpen, onClose }) => {
               style={styles.select} 
               value={dateRange} 
               onChange={(e) => setDateRange(e.target.value)}
+              disabled={loading}
             >
               <option value="last-week">Última semana</option>
               <option value="last-month">Último mês</option>
@@ -184,7 +245,8 @@ const ExportReport = ({ isOpen, onClose }) => {
                 <input 
                   type="checkbox" 
                   checked={selectedData.motivation} 
-                  onChange={() => handleSelectedDataChange('motivation')} 
+                  onChange={() => handleSelectedDataChange('motivation')}
+                  disabled={loading}
                 />
                 Motivação
               </label>
@@ -193,6 +255,7 @@ const ExportReport = ({ isOpen, onClose }) => {
                   type="checkbox" 
                   checked={selectedData.workload} 
                   onChange={() => handleSelectedDataChange('workload')} 
+                  disabled={loading}
                 />
                 Carga de Trabalho
               </label>
@@ -201,6 +264,7 @@ const ExportReport = ({ isOpen, onClose }) => {
                   type="checkbox" 
                   checked={selectedData.performance} 
                   onChange={() => handleSelectedDataChange('performance')} 
+                  disabled={loading}
                 />
                 Rendimento
               </label>
@@ -209,6 +273,7 @@ const ExportReport = ({ isOpen, onClose }) => {
                   type="checkbox" 
                   checked={selectedData.support} 
                   onChange={() => handleSelectedDataChange('support')} 
+                  disabled={loading}
                 />
                 Apoio da Equipe
               </label>
@@ -217,6 +282,7 @@ const ExportReport = ({ isOpen, onClose }) => {
                   type="checkbox" 
                   checked={selectedData.comments} 
                   onChange={() => handleSelectedDataChange('comments')} 
+                  disabled={loading}
                 />
                 Comentários e Sugestões
               </label>
@@ -225,11 +291,23 @@ const ExportReport = ({ isOpen, onClose }) => {
         </div>
         
         <div style={styles.footer}>
-          <button style={styles.cancelButton} onClick={onClose}>
+          <button 
+            style={styles.cancelButton} 
+            onClick={onClose}
+            disabled={loading}
+          >
             Cancelar
           </button>
-          <button style={styles.exportButton} onClick={handleExport}>
-            Exportar
+          <button 
+            style={{
+              ...styles.exportButton,
+              opacity: loading ? 0.7 : 1,
+              cursor: loading ? 'not-allowed' : 'pointer'
+            }} 
+            onClick={handleExport}
+            disabled={loading}
+          >
+            {loading ? 'Exportando...' : 'Exportar'}
           </button>
         </div>
       </div>

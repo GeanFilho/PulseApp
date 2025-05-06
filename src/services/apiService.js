@@ -62,34 +62,52 @@ const apiService = {
       }
     },
     
-    register: async (userData) => {
-      try {
-        const response = await api.post('/auth/register', userData);
-        
-        // Guardar token e dados do usuário
-        localStorage.setItem('token', response.data.token);
-        localStorage.setItem('user', JSON.stringify(response.data.user));
-        
-        // Atualizar a contagem de usuários em ambiente de desenvolvimento
-        if (process.env.NODE_ENV === 'development') {
-          const savedCountStr = localStorage.getItem('simulatedUserCount');
-          const currentCount = savedCountStr ? parseInt(savedCountStr) : 3;
-          const newCount = currentCount + 1;
-          localStorage.setItem('simulatedUserCount', newCount.toString());
-          
-          // Disparar evento para notificar outros componentes
-          document.dispatchEvent(new CustomEvent('userCountChanged', {
-            detail: { count: newCount, action: 'add' }
-          }));
-        }
-        
-        return response.data.user;
-      } catch (error) {
-        console.error('Erro de registro:', error);
-        throw error.response ? error.response.data : error;
-      }
-    },
+// No arquivo src/services/apiService.js, modifique a função register:
+
+register: async (userData) => {
+  try {
+    const response = await api.post('/auth/register', userData);
     
+    // Guardar token e dados do usuário
+    localStorage.setItem('token', response.data.token);
+    localStorage.setItem('user', JSON.stringify(response.data.user));
+    
+    // Atualizar a contagem de usuários em ambiente de desenvolvimento
+    if (process.env.NODE_ENV === 'development') {
+      const savedCountStr = localStorage.getItem('simulatedUserCount');
+      const currentCount = savedCountStr ? parseInt(savedCountStr) : 3;
+      const newCount = currentCount + 1;
+      
+      // Atualizar contagem total
+      localStorage.setItem('simulatedUserCount', newCount.toString());
+      
+      // Disparar evento para notificar outros componentes
+      // Com um tipo específico para garantir que seja processado corretamente
+      document.dispatchEvent(new CustomEvent('userCountChanged', {
+        detail: { 
+          count: newCount, 
+          action: 'register',
+          forceUpdate: true  // Flag para forçar atualização
+        }
+      }));
+      
+      // Também atualizar o localStorage para outras abas
+      try {
+        window.dispatchEvent(new StorageEvent('storage', {
+          key: 'simulatedUserCount',
+          newValue: newCount.toString()
+        }));
+      } catch (e) {
+        console.error('Erro ao disparar evento storage:', e);
+      }
+    }
+    
+    return response.data.user;
+  } catch (error) {
+    console.error('Erro de registro:', error);
+    throw error.response ? error.response.data : error;
+  }
+},
     logout: () => {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
@@ -172,74 +190,75 @@ const apiService = {
     },
     
     // Atualizar visibilidade do usuário
-    updateUserVisibility: async (userId, isVisible) => {
-      try {
-        // Primeiro tentar chamar a API
-        try {
-          const response = await api.patch(`/admin/users/${userId}/visibility`, {
-            visible: isVisible
-          });
-          
-          // Se tivermos uma resposta válida, usá-la
-          if (response.data) {
-            return response.data;
-          }
-        } catch (apiError) {
-          console.log('Erro de API durante atualização de visibilidade, usando simulação local:', apiError);
-          // Continuar com simulação local se a API falhar
-        }
-        
-        // Se estivermos em desenvolvimento ou a chamada da API falhou, simular a operação localmente
-        if (process.env.NODE_ENV === 'development') {
-          console.log(`Simulando ${isVisible ? 'mostrar' : 'ocultar'} usuário ${userId}`);
-          
-          // Obter usuários ocultos atuais
-          const savedHiddenUsers = localStorage.getItem('hiddenUsers');
-          let hiddenUserIds = savedHiddenUsers ? JSON.parse(savedHiddenUsers) : [];
-          
-          if (isVisible) {
-            // Remover da lista de ocultos
-            hiddenUserIds = hiddenUserIds.filter(id => id !== userId);
-          } else {
-            // Adicionar à lista oculta se ainda não estiver lá
-            if (!hiddenUserIds.includes(userId)) {
-              hiddenUserIds.push(userId);
-            }
-          }
-          
-          // Salvar lista atualizada de usuários ocultos
-          localStorage.setItem('hiddenUsers', JSON.stringify(hiddenUserIds));
-          
-          // Atualizar contagem de usuários com base na mudança de visibilidade
-          const totalCountStr = localStorage.getItem('simulatedUserCount');
-          if (totalCountStr) {
-            const totalCount = parseInt(totalCountStr);
-            
-            // Não alteramos a contagem total, apenas a visibilidade
-            // O cálculo de usuários visíveis acontece em outro lugar
-            
-            // Disparar evento personalizado para a interface atualizar
-            document.dispatchEvent(new CustomEvent('userVisibilityChanged', {
-              detail: { 
-                hiddenUsers: hiddenUserIds,
-                action: isVisible ? 'show' : 'hide',
-                userId: userId
-              }
-            }));
-          }
-          
-          return { 
-            success: true, 
-            message: `Usuário ${isVisible ? 'mostrado' : 'ocultado'} com sucesso` 
-          };
-        }
-        
-        throw new Error("Chamada de API falhou e simulação do modo de desenvolvimento não está disponível");
-      } catch (error) {
-        console.error(`Erro ao ${isVisible ? 'mostrar' : 'ocultar'} usuário:`, error);
-        throw error;
+updateUserVisibility: async (userId, isVisible) => {
+  try {
+    // Primeiro tentar chamar a API
+    try {
+      const response = await api.patch(`/admin/users/${userId}/visibility`, {
+        visible: isVisible
+      });
+      
+      // Se tivermos uma resposta válida, usá-la
+      if (response.data) {
+        return response.data;
       }
-    },
+    } catch (apiError) {
+      console.log('Erro de API durante atualização de visibilidade, usando simulação local:', apiError);
+      // Continuar com simulação local se a API falhar
+    }
+    
+    // Se estivermos em desenvolvimento ou a chamada da API falhou, simular a operação localmente
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`Simulando ${isVisible ? 'mostrar' : 'ocultar'} usuário ${userId}`);
+      
+      // Obter usuários ocultos atuais
+      const savedHiddenUsers = localStorage.getItem('hiddenUsers');
+      let hiddenUserIds = savedHiddenUsers ? JSON.parse(savedHiddenUsers) : [];
+      
+      // Contagem anterior de usuários visíveis (para calcular a diferença)
+      const totalCountStr = localStorage.getItem('simulatedUserCount');
+      const totalCount = totalCountStr ? parseInt(totalCountStr) : 3;
+      const previousVisibleCount = totalCount - hiddenUserIds.length;
+      
+      if (isVisible) {
+        // Remover da lista de ocultos
+        hiddenUserIds = hiddenUserIds.filter(id => id !== userId);
+      } else {
+        // Adicionar à lista oculta se ainda não estiver lá
+        if (!hiddenUserIds.includes(userId)) {
+          hiddenUserIds.push(userId);
+        }
+      }
+      
+      // Salvar lista atualizada de usuários ocultos
+      localStorage.setItem('hiddenUsers', JSON.stringify(hiddenUserIds));
+      
+      // Calcular nova contagem de usuários visíveis
+      const newVisibleCount = totalCount - hiddenUserIds.length;
+      
+      // Disparar evento personalizado para a interface atualizar
+      document.dispatchEvent(new CustomEvent('userVisibilityChanged', {
+        detail: { 
+          hiddenUsers: hiddenUserIds,
+          action: isVisible ? 'show' : 'hide',
+          userId: userId,
+          visibleCount: newVisibleCount  // Adicionar a contagem visível ao evento
+        }
+      }));
+      
+      return { 
+        success: true, 
+        message: `Usuário ${isVisible ? 'mostrado' : 'ocultado'} com sucesso`,
+        visibleCount: newVisibleCount
+      };
+    }
+    
+    throw new Error("Chamada de API falhou e simulação do modo de desenvolvimento não está disponível");
+  } catch (error) {
+    console.error(`Erro ao ${isVisible ? 'mostrar' : 'ocultar'} usuário:`, error);
+    throw error;
+  }
+},
     
     // Obter a contagem de usuários
     getUserCount: async () => {
@@ -260,13 +279,7 @@ const apiService = {
         if (process.env.NODE_ENV === 'development') {
           // Obter a contagem salva ou padronizar para um valor razoável
           const savedCount = localStorage.getItem('simulatedUserCount');
-          let count = savedCount ? parseInt(savedCount) : 3;
-          
-          // Incrementar ocasionalmente para simulação
-          if (Math.random() < 0.05) {
-            count++;
-            localStorage.setItem('simulatedUserCount', count.toString());
-          }
+          let count = savedCount && !isNaN(parseInt(savedCount)) ? parseInt(savedCount) : 3;
           
           return { count };
         }
@@ -384,9 +397,15 @@ const generateMockUsers = () => {
   // Lista de usuários
   const users = [];
   
-  // Gerar usuários simulados
-  const numUsers = parseInt(localStorage.getItem('simulatedUserCount')) || 15;
+  // Obter o número de usuários do localStorage
+  const savedCountStr = localStorage.getItem('simulatedUserCount');
+  const numUsers = savedCountStr && !isNaN(parseInt(savedCountStr)) 
+    ? parseInt(savedCountStr) 
+    : 3;
   
+  console.log(`Gerando ${numUsers} usuários simulados...`);
+  
+  // Gerar usuários simulados
   for (let i = 0; i < numUsers; i++) {
     const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
     const lastName = lastNames[Math.floor(Math.random() * lastNames.length)];

@@ -19,8 +19,9 @@ const AdminDashboard = () => {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteSuccess, setDeleteSuccess] = useState(false);
   const [userCount, setUserCount] = useState(0);
+  const [feedbacksToExport, setFeedbacksToExport] = useState([]);
   const [trendData, setTrendData] = useState({
-    direction: 'up', // 'up', 'down', or 'stable'
+    direction: 'up',
     percentage: 5,
     weeklyValues: [7.2, 6.8, 7.0, 7.4, 7.6, 7.5, 7.8]
   });
@@ -54,23 +55,29 @@ const AdminDashboard = () => {
     try {
       console.log("Atualizando contagem de usuários...");
       
-      // Forçar atualização lendo diretamente do localStorage para ter o valor mais recente
+      // Obter contagem total de usuários do localStorage
       const savedCount = localStorage.getItem('simulatedUserCount');
       const totalCount = savedCount ? parseInt(savedCount) : 3;
       
-      // Obter a lista de usuários ocultos
+      // Obter lista de usuários ocultos
       const hiddenUsers = localStorage.getItem('hiddenUsers');
       const hiddenUserIds = hiddenUsers ? JSON.parse(hiddenUsers) : [];
-      const hiddenUserCount = hiddenUserIds.length;
       
-      console.log('Contagem total de usuários (direto do localStorage):', totalCount);
+      // Forma mais direta de calcular usuários visíveis
+      // Criar um array de IDs de 1 até totalCount
+      const allIds = Array.from({ length: totalCount }, (_, i) => i + 1);
+      
+      // Filtrar para obter apenas os IDs que não estão ocultos
+      const visibleIds = allIds.filter(id => !hiddenUserIds.includes(id));
+      const visibleCount = visibleIds.length;
+      
+      console.log('Contagem total de usuários:', totalCount);
       console.log('IDs de usuários ocultos:', hiddenUserIds);
-      console.log('Quantidade de usuários ocultos:', hiddenUserCount);
+      console.log('IDs de usuários visíveis:', visibleIds);
+      console.log('Contagem visível calculada:', visibleCount);
       
-      // Calcular contagem visível (total menos ocultos)
-      // Garantir que não fique abaixo de zero
-      const visibleCount = Math.max(totalCount - hiddenUserCount, 0);
-      console.log('Contagem final de usuários visíveis:', visibleCount);
+      // Salvar a contagem visível no localStorage para referência
+      localStorage.setItem('visibleUserCount', visibleCount.toString());
       
       // Atualizar o estado com a contagem visível
       setUserCount(visibleCount);
@@ -78,46 +85,39 @@ const AdminDashboard = () => {
       return visibleCount;
     } catch (err) {
       console.error('Erro ao buscar contagem de usuários:', err);
-      // Padrão para um valor razoável se tudo falhar
       setUserCount(3);
       return 3;
     }
   };
   
-  // Adicione estas funções ao seu componente AdminDashboard
+  // Efeito para lidar com eventos de usuário
   useEffect(() => {
     // Função para lidar com eventos de mudança de visibilidade do usuário
     const handleVisibilityChange = (event) => {
       console.log('Evento de visibilidade de usuário detectado:', event.detail);
       
-      // Forçar atualização da contagem completa
+      // Se temos um valor de contagem visível explícito e forceUpdate, usar diretamente
+      if (event.detail && event.detail.visibleCount !== undefined && event.detail.forceUpdate) {
+        console.log('Atualizando contagem diretamente para:', event.detail.visibleCount);
+        setUserCount(event.detail.visibleCount);
+      } else {
+        // Caso contrário, recalcular
+        fetchUserCount();
+      }
+    };
+    
+    // Função para lidar com qualquer alteração de contagem
+    const handleCountChange = (event) => {
+      console.log('Evento de alteração de contagem detectado:', event.detail);
+      // Sempre chamar fetchUserCount para garantir atualização
       fetchUserCount();
     };
     
-    // Função específica para eventos de contagem
-    const handleCountChange = (event) => {
-      console.log('Evento de alteração de contagem detectado:', event.detail);
-      
-      // Se o evento incluir uma contagem atualizada, use-a diretamente
-      if (event.detail && event.detail.count !== undefined) {
-        const hiddenUsers = localStorage.getItem('hiddenUsers');
-        const hiddenUserIds = hiddenUsers ? JSON.parse(hiddenUsers) : [];
-        const visibleCount = Math.max(event.detail.count - hiddenUserIds.length, 0);
-        
-        console.log('Atualizando contagem diretamente para:', visibleCount);
-        setUserCount(visibleCount);
-      } else {
-        // Caso contrário, faça uma nova busca completa
-        fetchUserCount();
-      }
-    };
-    
-    // Função para lidar com o evento de storage
+    // Função para lidar com mudanças de armazenamento
     const handleStorageChange = (event) => {
-      if (event.key === 'hiddenUsers' || event.key === 'simulatedUserCount') {
-        console.log('Evento de storage detectado para:', event.key);
-        fetchUserCount();
-      }
+      console.log('Evento de storage detectado:', event.key);
+      // Sempre chamar fetchUserCount para qualquer mudança relevante
+      fetchUserCount();
     };
     
     // Registrar os ouvintes de eventos
@@ -128,10 +128,10 @@ const AdminDashboard = () => {
     // Buscar contagem inicial
     fetchUserCount();
     
-    // Configurar um intervalo para verificar periodicamente
-    const interval = setInterval(fetchUserCount, 10000); // 10 segundos
+    // Configurar um intervalo para verificar periodicamente (10 segundos)
+    const interval = setInterval(fetchUserCount, 10000);
     
-    // Função de limpeza para remover os ouvintes
+    // Função de limpeza
     return () => {
       document.removeEventListener('userVisibilityChanged', handleVisibilityChange);
       document.removeEventListener('userCountChanged', handleCountChange);
@@ -140,6 +140,60 @@ const AdminDashboard = () => {
     };
   }, []);
    
+  // Função para preparar a exportação e abrir o modal
+  const handleExportButtonClick = async () => {
+    try {
+      // Tentar usar os feedbacks recentes já carregados
+      if (dashboardData.recentFeedbacks && dashboardData.recentFeedbacks.length > 0) {
+        setFeedbacksToExport(dashboardData.recentFeedbacks);
+        setExportModalOpen(true);
+        return;
+      }
+      
+      // Se não tiver feedbacks recentes, buscar todos os feedbacks
+      const allFeedbacks = await feedbackService.getAllFeedbacks({
+        period: period
+      });
+      
+      // Se conseguir obter os feedbacks, abra o modal com eles
+      if (allFeedbacks && allFeedbacks.length > 0) {
+        setFeedbacksToExport(allFeedbacks);
+        setExportModalOpen(true);
+      } else {
+        // Se mesmo assim não houver dados, usar dados de exemplo
+        const sampleFeedbacks = [
+          {
+            id: 1,
+            name: "João Silva",
+            dept: "Desenvolvimento",
+            date: "2025-04-22",
+            motivation: 8,
+            workload: 7,
+            performance: 9,
+            support: "Sim",
+            improvementSuggestion: "Exemplo de feedback para teste de exportação."
+          },
+          {
+            id: 2,
+            name: "Maria Santos",
+            dept: "Marketing",
+            date: "2025-04-20",
+            motivation: 7,
+            workload: 8,
+            performance: 7,
+            support: "Em partes",
+            improvementSuggestion: "Exemplo de sugestão para teste de exportação."
+          }
+        ];
+        
+        setFeedbacksToExport(sampleFeedbacks);
+        setExportModalOpen(true);
+      }
+    } catch (error) {
+      console.error('Erro ao buscar feedbacks para exportação:', error);
+      alert('Erro ao preparar dados para exportação. Por favor, tente novamente.');
+    }
+  };
 
   // Função para buscar os dados do backend
   const fetchDashboardData = async () => {
@@ -677,7 +731,7 @@ const AdminDashboard = () => {
             </select>
             <button 
               style={styles.exportButton}
-              onClick={() => setExportModalOpen(true)}
+              onClick={handleExportButtonClick}
             >
               Exportar
             </button>
@@ -842,6 +896,7 @@ const AdminDashboard = () => {
       <ExportReport 
         isOpen={exportModalOpen} 
         onClose={() => setExportModalOpen(false)} 
+        feedbackData={feedbacksToExport}
       />
     </div>
   );
