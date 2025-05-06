@@ -124,25 +124,6 @@ const styles = {
     objectFit: 'cover',
     border: '2px solid #e5e7eb'
   },
-  avatarSelector: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '16px',
-    marginTop: '12px'
-  },
-  avatarOption: {
-    width: '64px',
-    height: '64px',
-    borderRadius: '50%',
-    cursor: 'pointer',
-    objectFit: 'cover',
-    border: '2px solid transparent',
-    transition: 'all 0.2s ease'
-  },
-  avatarOptionSelected: {
-    border: '2px solid #4f46e5',
-    transform: 'scale(1.1)'
-  },
   avatarName: {
     fontSize: '1.25rem',
     fontWeight: '500',
@@ -158,16 +139,71 @@ const styles = {
     color: '#4b5563',
     marginLeft: '12px',
     transition: 'all 0.2s'
+  },
+  // Estilos para o seletor de avatares embutido
+  avatarSelectorContainer: {
+    marginTop: '20px',
+  },
+  avatarSelectorTitle: {
+    fontSize: '16px',
+    fontWeight: '500',
+    marginBottom: '12px',
+    color: '#4b5563'
+  },
+  avatarGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))',
+    gap: '16px',
+    maxWidth: '100%'
+  },
+  avatarOption: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    cursor: 'pointer',
+  },
+  avatarOptionImage: {
+    width: '64px',
+    height: '64px',
+    borderRadius: '50%',
+    border: '2px solid transparent',
+    padding: '2px',
+    transition: 'all 0.2s ease',
+    objectFit: 'cover'
+  },
+  avatarSelected: {
+    border: '2px solid #4f46e5',
+    transform: 'scale(1.1)',
+    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
   }
 };
 
 const ProfilePage = () => {
-  const { currentUser, isAdmin } = useAuth();
+  const { currentUser } = useAuth();
   const navigate = useNavigate();
   
   // URLs de avatares originais
   const maleAvatarUrl = 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png';
   const femaleAvatarUrl = 'https://cdn-icons-png.flaticon.com/512/3135/3135789.png';
+  
+  // Array de opções de avatares - mantendo apenas o gato entre os animais
+  const avatarOptions = [
+    // Personagens
+    { id: 'astronaut', url: 'https://cdn-icons-png.flaticon.com/512/4139/4139981.png' },
+    { id: 'ninja', url: 'https://cdn-icons-png.flaticon.com/512/4139/4139993.png' },
+    { id: 'scientist', url: 'https://cdn-icons-png.flaticon.com/512/4140/4140037.png' },
+    { id: 'robot', url: 'https://cdn-icons-png.flaticon.com/512/4139/4139951.png' },
+    { id: 'superhero', url: 'https://cdn-icons-png.flaticon.com/512/4140/4140048.png' },
+    { id: 'alien', url: 'https://cdn-icons-png.flaticon.com/512/4139/4139970.png' },
+    { id: 'artist', url: 'https://cdn-icons-png.flaticon.com/512/4140/4140047.png' },
+    
+    // Apenas o gato entre os animais
+    { id: 'cat', url: 'https://cdn-icons-png.flaticon.com/512/4322/4322991.png' },
+    
+    // Avatares originais
+    { id: 'male', url: maleAvatarUrl },
+    { id: 'female', url: femaleAvatarUrl }
+  ];
   
   const [formData, setFormData] = useState({
     name: '',
@@ -181,15 +217,58 @@ const ProfilePage = () => {
   const [loading, setLoading] = useState(false);
   const [showAvatarSelector, setShowAvatarSelector] = useState(false);
   
+  // Função para salvar avatar persistente
+  const saveAvatarPersistently = (email, avatarUrl) => {
+    try {
+      // Salvar em um localStorage separado para persistência
+      localStorage.setItem('persistentAvatar_' + email, avatarUrl);
+      console.log('Avatar persistente salvo para:', email, avatarUrl);
+    } catch (e) {
+      console.error('Erro ao salvar avatar persistente:', e);
+    }
+  };
+
+  // Função para carregar avatar persistente
+  const loadPersistentAvatar = (email) => {
+    try {
+      const savedAvatar = localStorage.getItem('persistentAvatar_' + email);
+      console.log('Avatar persistente carregado para:', email, savedAvatar);
+      return savedAvatar;
+    } catch (e) {
+      console.error('Erro ao carregar avatar persistente:', e);
+      return null;
+    }
+  };
+  
   useEffect(() => {
     // Carregar dados do usuário quando o componente é montado
     if (currentUser) {
+      console.log('Dados do usuário ao carregar:', currentUser);
+      console.log('Avatar URL no currentUser:', currentUser.avatarUrl);
+      
+      // Determinar a URL do avatar com base no gênero ou URL salvo
+      let avatarUrl = currentUser.avatarUrl;
+      let gender = currentUser.gender || 'male';
+      
+      // Verificar avatar persistente
+      const persistentAvatar = loadPersistentAvatar(currentUser.email);
+      if (persistentAvatar) {
+        console.log('Usando avatar persistente:', persistentAvatar);
+        avatarUrl = persistentAvatar;
+      }
+      // Se ainda não há avatarUrl, usar a lógica antiga baseada em gênero
+      else if (!avatarUrl) {
+        avatarUrl = gender === 'female' ? femaleAvatarUrl : maleAvatarUrl;
+      }
+      
+      console.log('Avatar URL final a ser usado:', avatarUrl);
+      
       setFormData({
         name: currentUser.name || '',
         email: currentUser.email || '',
         department: currentUser.department || 'TI',
-        gender: currentUser.gender || 'male',
-        avatarUrl: currentUser.avatarUrl || maleAvatarUrl,
+        gender: gender,
+        avatarUrl: avatarUrl
       });
     }
   }, [currentUser]);
@@ -202,11 +281,14 @@ const ProfilePage = () => {
     });
   };
   
-  const handleAvatarChange = (gender) => {
+  const handleAvatarSelect = (avatar) => {
     setFormData({
       ...formData,
-      gender,
-      avatarUrl: gender === 'male' ? maleAvatarUrl : femaleAvatarUrl
+      avatarUrl: avatar.url,
+      // Se é um dos avatares padrão, mantenha a compatibilidade com o campo gender
+      gender: avatar.id === 'male' ? 'male' : 
+              avatar.id === 'female' ? 'female' : 
+              formData.gender // manter o gênero atual para outros avatares
     });
   };
 
@@ -234,9 +316,12 @@ const ProfilePage = () => {
       const userData = {
         name: formData.name,
         department: formData.department,
-        gender: formData.gender,
-        avatarUrl: formData.gender === 'female' ? femaleAvatarUrl : maleAvatarUrl
+        gender: formData.gender, // Mantido para compatibilidade
+        avatarUrl: formData.avatarUrl // Novo campo
       };
+      
+      // Salvar avatar persistentemente
+      saveAvatarPersistently(formData.email, formData.avatarUrl);
       
       // Chamar o serviço de API para atualizar
       await apiService.auth.updateUserProfile(userData);
@@ -284,6 +369,34 @@ const ProfilePage = () => {
     }
   };
   
+  // Componente de seletor de avatar embutido (sem texto nas opções)
+  const AvatarSelectorInline = () => {
+    return (
+      <div style={styles.avatarSelectorContainer}>
+        <h3 style={styles.avatarSelectorTitle}>Escolha seu avatar:</h3>
+        <div style={styles.avatarGrid}>
+          {avatarOptions.map((avatar) => (
+            <div 
+              key={avatar.id}
+              style={styles.avatarOption}
+              onClick={() => handleAvatarSelect(avatar)}
+            >
+              <img 
+                src={avatar.url} 
+                alt={`Avatar ${avatar.id}`}
+                style={{
+                  ...styles.avatarOptionImage,
+                  ...(formData.avatarUrl === avatar.url ? styles.avatarSelected : {})
+                }}
+              />
+              {/* Removido o texto/nome de cada avatar */}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+  
   return (
     <div style={styles.container}>
       <div style={styles.header}>
@@ -323,31 +436,8 @@ const ProfilePage = () => {
               </div>
             </div>
             
-            {showAvatarSelector && (
-              <div style={styles.avatarSelector}>
-                <img 
-                  src={maleAvatarUrl} 
-                  alt="Avatar Masculino" 
-                  style={{
-                    ...styles.avatarOption,
-                    ...(formData.gender === 'male' ? styles.avatarOptionSelected : {})
-                  }}
-                  onClick={() => handleAvatarChange('male')}
-                />
-                <img 
-                  src={femaleAvatarUrl} 
-                  alt="Avatar Feminino" 
-                  style={{
-                    ...styles.avatarOption,
-                    ...(formData.gender === 'female' ? styles.avatarOptionSelected : {})
-                  }}
-                  onClick={() => handleAvatarChange('female')}
-                />
-                <span style={{ marginLeft: '8px', color: '#6b7280', fontSize: '14px' }}>
-                  Selecione um avatar
-                </span>
-              </div>
-            )}
+            {/* Seletor de avatares embutido */}
+            {showAvatarSelector && <AvatarSelectorInline />}
           </div>
           
           <div style={styles.formGroup}>

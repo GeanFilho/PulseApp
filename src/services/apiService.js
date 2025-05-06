@@ -51,6 +51,22 @@ const apiService = {
       try {
         const response = await api.post('/auth/login', { email, password });
         
+        // Verificar se há um avatar persistente salvo
+        const persistentAvatar = localStorage.getItem('persistentAvatar_' + email);
+        
+        // Adicionar avatarUrl aos dados do usuário se existir no armazenamento persistente
+        if (persistentAvatar) {
+          // Modificar o objeto de usuário para incluir o avatar persistente
+          response.data.user = {
+            ...response.data.user,
+            avatarUrl: persistentAvatar
+          };
+          
+          console.log('Login com avatar persistente:', persistentAvatar);
+        } else {
+          console.log('Nenhum avatar persistente encontrado para:', email);
+        }
+        
         // Guardar token e dados do usuário
         localStorage.setItem('token', response.data.token);
         localStorage.setItem('user', JSON.stringify(response.data.user));
@@ -161,6 +177,24 @@ const apiService = {
     },
     
     logout: () => {
+      // Antes de remover os dados do usuário, verifique se há um avatar persistente
+      const currentUserStr = localStorage.getItem('user');
+      
+      if (currentUserStr) {
+        try {
+          const currentUser = JSON.parse(currentUserStr);
+          
+          // Se o usuário tem um email e um avatar, vamos guardar o avatar persistentemente
+          if (currentUser.email && currentUser.avatarUrl) {
+            console.log('Salvando avatar antes do logout:', currentUser.email, currentUser.avatarUrl);
+            localStorage.setItem('persistentAvatar_' + currentUser.email, currentUser.avatarUrl);
+          }
+        } catch (e) {
+          console.error('Erro ao salvar avatar no logout:', e);
+        }
+      }
+      
+      // Continuar com o logout normal
       localStorage.removeItem('token');
       localStorage.removeItem('user');
     },
