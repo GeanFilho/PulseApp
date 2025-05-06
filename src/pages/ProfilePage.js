@@ -165,7 +165,7 @@ const ProfilePage = () => {
   const { currentUser, isAdmin } = useAuth();
   const navigate = useNavigate();
   
-  // URLs de avatares padrão
+  // URLs de avatares originais
   const maleAvatarUrl = 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png';
   const femaleAvatarUrl = 'https://cdn-icons-png.flaticon.com/512/3135/3135789.png';
   
@@ -235,11 +235,28 @@ const ProfilePage = () => {
         name: formData.name,
         department: formData.department,
         gender: formData.gender,
-        avatarUrl: formData.avatarUrl
+        avatarUrl: formData.gender === 'female' ? femaleAvatarUrl : maleAvatarUrl
       };
       
       // Chamar o serviço de API para atualizar
       await apiService.auth.updateUserProfile(userData);
+      
+      // Importante: Atualizar manualmente o localStorage para garantir que a navbar veja as alterações
+      const currentStoredUser = localStorage.getItem('user');
+      if (currentStoredUser) {
+        const parsedUser = JSON.parse(currentStoredUser);
+        const updatedUser = {
+          ...parsedUser,
+          ...userData
+        };
+        localStorage.setItem('user', JSON.stringify(updatedUser));
+        
+        // Disparar um evento global para notificar outros componentes (incluindo a navbar)
+        window.dispatchEvent(new Event('userProfileUpdated'));
+        
+        // Adicionar um log para depuração
+        console.log('Perfil atualizado, novo avatar:', updatedUser.avatarUrl);
+      }
       
       setStatus({ 
         type: 'success', 

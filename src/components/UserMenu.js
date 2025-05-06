@@ -87,7 +87,7 @@ const UserMenu = () => {
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = React.useState(false);
 
-  // URLs de avatares padrão
+  // URLs de avatares originais
   const maleAvatarUrl = 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png';
   const femaleAvatarUrl = 'https://cdn-icons-png.flaticon.com/512/3135/3135789.png';
   
@@ -109,12 +109,35 @@ const UserMenu = () => {
 
   // Determinar a URL do avatar com base no gênero
   const getAvatarUrl = () => {
-    if (currentUser?.avatarUrl) {
-      return currentUser.avatarUrl;
+    // Importante: Obter dados diretamente do localStorage para garantir que sejam os mais atualizados
+    const storedUserData = localStorage.getItem('user');
+    const storedUser = storedUserData ? JSON.parse(storedUserData) : currentUser;
+    
+    // Verificar se há um avatarUrl salvo no localStorage
+    if (storedUser?.avatarUrl) {
+      return storedUser.avatarUrl;
     }
     
-    return currentUser?.gender === 'female' ? femaleAvatarUrl : maleAvatarUrl;
+    // Caso contrário, usar o avatar default com base no gênero
+    return storedUser?.gender === 'female' ? femaleAvatarUrl : maleAvatarUrl;
   };
+
+  // Usar useEffect para atualizar o componente quando o localStorage for modificado
+  React.useEffect(() => {
+    // Função para atualizar o componente quando o evento é disparado
+    const handleProfileUpdate = () => {
+      // Forçar uma re-renderização do componente
+      setIsOpen(isOpen => isOpen); // Isso não muda o estado, mas força uma re-renderização
+    };
+
+    // Adicionar listener para o evento personalizado
+    window.addEventListener('userProfileUpdated', handleProfileUpdate);
+    
+    // Limpar listener ao desmontar o componente
+    return () => {
+      window.removeEventListener('userProfileUpdated', handleProfileUpdate);
+    };
+  }, []);
   
   return (
     <div style={styles.userMenuContainer}>
@@ -123,7 +146,7 @@ const UserMenu = () => {
         onClick={() => setIsOpen(!isOpen)}
       >
         <div style={styles.userAvatar}>
-          {currentUser?.avatarUrl || currentUser?.gender ? (
+          {getAvatarUrl() ? (
             <img 
               src={getAvatarUrl()} 
               alt={`Avatar de ${currentUser?.name || 'usuário'}`}
