@@ -1,8 +1,11 @@
 // src/pages/ProfilePage.js
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import apiService from '../services/apiService';
+import { AlertCircle, CheckCircle } from 'lucide-react';
 
+// Estilos inline para o componente de perfil
 const styles = {
   container: {
     maxWidth: '800px',
@@ -89,6 +92,9 @@ const styles = {
     padding: '12px',
     borderRadius: '8px',
     marginBottom: '16px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px'
   },
   error: {
     backgroundColor: '#fee2e2',
@@ -96,60 +102,94 @@ const styles = {
     padding: '12px',
     borderRadius: '8px',
     marginBottom: '16px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px'
   },
   avatarSection: {
     display: 'flex',
-    alignItems: 'center',
+    flexDirection: 'column',
     marginBottom: '24px',
   },
-  avatar: {
+  avatarPreview: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '24px',
+    marginBottom: '16px'
+  },
+  avatarImage: {
     width: '100px',
     height: '100px',
     borderRadius: '50%',
-    backgroundColor: '#e0e7ff',
+    objectFit: 'cover',
+    border: '2px solid #e5e7eb'
+  },
+  avatarSelector: {
     display: 'flex',
     alignItems: 'center',
-    justifyContent: 'center',
-    fontSize: '2rem',
-    fontWeight: 'bold',
-    color: '#4f46e5',
-    marginRight: '24px',
+    gap: '16px',
+    marginTop: '12px'
   },
-  uploadButton: {
-    padding: '8px 16px',
-    backgroundColor: '#f3f4f6',
-    color: '#374151',
-    border: '1px solid #d1d5db',
-    borderRadius: '8px',
+  avatarOption: {
+    width: '64px',
+    height: '64px',
+    borderRadius: '50%',
     cursor: 'pointer',
-    fontSize: '14px',
+    objectFit: 'cover',
+    border: '2px solid transparent',
+    transition: 'all 0.2s ease'
   },
+  avatarOptionSelected: {
+    border: '2px solid #4f46e5',
+    transform: 'scale(1.1)'
+  },
+  avatarName: {
+    fontSize: '1.25rem',
+    fontWeight: '500',
+    color: '#111827'
+  },
+  changeAvatarButton: {
+    padding: '8px 12px',
+    backgroundColor: '#f3f4f6',
+    border: '1px solid #d1d5db',
+    borderRadius: '6px',
+    fontSize: '14px',
+    cursor: 'pointer',
+    color: '#4b5563',
+    marginLeft: '12px',
+    transition: 'all 0.2s'
+  }
 };
 
 const ProfilePage = () => {
   const { currentUser, isAdmin } = useAuth();
   const navigate = useNavigate();
   
+  // URLs de avatares padrão
+  const maleAvatarUrl = 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png';
+  const femaleAvatarUrl = 'https://cdn-icons-png.flaticon.com/512/3135/3135789.png';
+  
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     department: '',
-    position: '',
-    phone: '',
+    gender: 'male',
+    avatarUrl: maleAvatarUrl,
   });
   
   const [status, setStatus] = useState({ type: '', message: '' });
+  const [loading, setLoading] = useState(false);
+  const [showAvatarSelector, setShowAvatarSelector] = useState(false);
   
   useEffect(() => {
-    // Simulação de carregamento dos dados do usuário
+    // Carregar dados do usuário quando o componente é montado
     if (currentUser) {
-      // Em uma aplicação real, você buscaria essas informações da API
       setFormData({
         name: currentUser.name || '',
         email: currentUser.email || '',
-        department: 'TI',
-        position: 'Desenvolvedor Front-end',
-        phone: '(11) 98765-4321',
+        department: currentUser.department || 'TI',
+        gender: currentUser.gender || 'male',
+        avatarUrl: currentUser.avatarUrl || maleAvatarUrl,
       });
     }
   }, [currentUser]);
@@ -162,30 +202,69 @@ const ProfilePage = () => {
     });
   };
   
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    
-    // Aqui seria implementada a lógica para salvar os dados
-    console.log('Dados a serem salvos:', formData);
-    
-    // Simulação de sucesso
-    setStatus({ 
-      type: 'success', 
-      message: 'Perfil atualizado com sucesso!' 
+  const handleAvatarChange = (gender) => {
+    setFormData({
+      ...formData,
+      gender,
+      avatarUrl: gender === 'male' ? maleAvatarUrl : femaleAvatarUrl
     });
-    
-    // Limpa a mensagem após 3 segundos
-    setTimeout(() => {
-      setStatus({ type: '', message: '' });
-    }, 3000);
+  };
+
+  const toggleAvatarSelector = () => {
+    setShowAvatarSelector(!showAvatarSelector);
   };
   
-  const getInitials = (name) => {
-    return name
-      .split(' ')
-      .map(n => n[0])
-      .join('')
-      .toUpperCase();
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setStatus({ type: '', message: '' });
+    
+    try {
+      // Verificar se há mudanças
+      if (!formData.name.trim()) {
+        setStatus({ 
+          type: 'error', 
+          message: 'Por favor, preencha seu nome completo' 
+        });
+        setLoading(false);
+        return;
+      }
+      
+      // Preparar dados para atualização
+      const userData = {
+        name: formData.name,
+        department: formData.department,
+        gender: formData.gender,
+        avatarUrl: formData.avatarUrl
+      };
+      
+      // Chamar o serviço de API para atualizar
+      await apiService.auth.updateUserProfile(userData);
+      
+      setStatus({ 
+        type: 'success', 
+        message: 'Perfil atualizado com sucesso!' 
+      });
+      
+      // Ocultar seletor de avatar após salvar
+      setShowAvatarSelector(false);
+      
+    } catch (error) {
+      console.error('Erro ao atualizar perfil:', error);
+      setStatus({ 
+        type: 'error', 
+        message: 'Ocorreu um erro ao atualizar seu perfil. Por favor, tente novamente.' 
+      });
+    } finally {
+      setLoading(false);
+      
+      // Limpar mensagem de sucesso após alguns segundos
+      if (status.type === 'success') {
+        setTimeout(() => {
+          setStatus({ type: '', message: '' });
+        }, 3000);
+      }
+    }
   };
   
   return (
@@ -197,6 +276,9 @@ const ProfilePage = () => {
       
       {status.message && (
         <div style={styles[status.type]}>
+          {status.type === 'success' 
+            ? <CheckCircle size={20} /> 
+            : <AlertCircle size={20} />}
           {status.message}
         </div>
       )}
@@ -206,96 +288,116 @@ const ProfilePage = () => {
           <h2 style={styles.sectionTitle}>Informações Pessoais</h2>
           
           <div style={styles.avatarSection}>
-            <div style={styles.avatar}>
-              {getInitials(formData.name)}
-            </div>
-            <button type="button" style={styles.uploadButton}>
-              Alterar foto
-            </button>
-          </div>
-          
-          <div style={styles.formRow}>
-            <div style={styles.formGroup}>
-              <label style={styles.label} htmlFor="name">Nome Completo</label>
-              <input
-                type="text"
-                id="name"
-                name="name"
-                style={styles.input}
-                value={formData.name}
-                onChange={handleInputChange}
-                required
+            <div style={styles.avatarPreview}>
+              <img 
+                src={formData.avatarUrl} 
+                alt="Avatar" 
+                style={styles.avatarImage} 
               />
+              <div>
+                <span style={styles.avatarName}>{formData.name || 'Seu Nome'}</span>
+                <button 
+                  type="button"
+                  style={styles.changeAvatarButton}
+                  onClick={toggleAvatarSelector}
+                >
+                  {showAvatarSelector ? 'Cancelar' : 'Alterar avatar'}
+                </button>
+              </div>
             </div>
             
-            <div style={styles.formGroup}>
-              <label style={styles.label} htmlFor="email">Email</label>
-              <input
-                type="email"
-                id="email"
-                name="email"
-                style={styles.input}
-                value={formData.email}
-                onChange={handleInputChange}
-                required
-                disabled
-              />
-            </div>
-          </div>
-          
-          <div style={styles.formRow}>
-            <div style={styles.formGroup}>
-              <label style={styles.label} htmlFor="department">Departamento</label>
-              <select
-                id="department"
-                name="department"
-                style={styles.select}
-                value={formData.department}
-                onChange={handleInputChange}
-                required
-              >
-                <option value="Gestão">Gestão</option>
-                <option value="TI">TI</option>
-                <option value="Copywriter">Copywriter</option>
-                <option value="Gestão de Tráfego">Gestão de Tráfego</option>
-                <option value="Edição de Vídeo">Edição de Vídeo</option>
-                <option value="Email Marketing">Email Marketing</option>
-                <option value="Assistentes">Assistentes</option>
-              </select>
-            </div>
-            
-            <div style={styles.formGroup}>
-              <label style={styles.label} htmlFor="position">Cargo</label>
-              <input
-                type="text"
-                id="position"
-                name="position"
-                style={styles.input}
-                value={formData.position}
-                onChange={handleInputChange}
-                required
-              />
-            </div>
+            {showAvatarSelector && (
+              <div style={styles.avatarSelector}>
+                <img 
+                  src={maleAvatarUrl} 
+                  alt="Avatar Masculino" 
+                  style={{
+                    ...styles.avatarOption,
+                    ...(formData.gender === 'male' ? styles.avatarOptionSelected : {})
+                  }}
+                  onClick={() => handleAvatarChange('male')}
+                />
+                <img 
+                  src={femaleAvatarUrl} 
+                  alt="Avatar Feminino" 
+                  style={{
+                    ...styles.avatarOption,
+                    ...(formData.gender === 'female' ? styles.avatarOptionSelected : {})
+                  }}
+                  onClick={() => handleAvatarChange('female')}
+                />
+                <span style={{ marginLeft: '8px', color: '#6b7280', fontSize: '14px' }}>
+                  Selecione um avatar
+                </span>
+              </div>
+            )}
           </div>
           
           <div style={styles.formGroup}>
-            <label style={styles.label} htmlFor="phone">Telefone</label>
+            <label style={styles.label} htmlFor="name">Nome Completo</label>
             <input
-              type="tel"
-              id="phone"
-              name="phone"
+              type="text"
+              id="name"
+              name="name"
               style={styles.input}
-              value={formData.phone}
+              value={formData.name}
               onChange={handleInputChange}
+              required
             />
+          </div>
+          
+          <div style={styles.formGroup}>
+            <label style={styles.label} htmlFor="email">Email</label>
+            <input
+              type="email"
+              id="email"
+              name="email"
+              style={styles.input}
+              value={formData.email}
+              onChange={handleInputChange}
+              required
+              disabled
+            />
+          </div>
+          
+          <div style={styles.formGroup}>
+            <label style={styles.label} htmlFor="department">Departamento</label>
+            <select
+              id="department"
+              name="department"
+              style={styles.select}
+              value={formData.department}
+              onChange={handleInputChange}
+              required
+            >
+              <option value="Gestão">Gestão</option>
+              <option value="TI">TI</option>
+              <option value="Copywriter">Copywriter</option>
+              <option value="Gestão de Tráfego">Gestão de Tráfego</option>
+              <option value="Edição de Vídeo">Edição de Vídeo</option>
+              <option value="Email Marketing">Email Marketing</option>
+              <option value="Assistentes">Assistentes</option>
+            </select>
           </div>
         </div>
         
         <div style={{marginTop: '24px', display: 'flex'}}>
-          <button type="submit" style={styles.saveButton}>
-            Salvar Alterações
+          <button 
+            type="submit" 
+            style={{
+              ...styles.saveButton,
+              opacity: loading ? 0.7 : 1,
+              cursor: loading ? 'not-allowed' : 'pointer'
+            }}
+            disabled={loading}
+          >
+            {loading ? 'Salvando...' : 'Salvar Alterações'}
           </button>
-          <button type="button" style={styles.cancelButton} onClick={() => navigate(-1)}>
+          <button 
+            type="button" 
+            style={styles.cancelButton} 
+            onClick={() => navigate(-1)}
+          >
             Cancelar
           </button>
         </div>

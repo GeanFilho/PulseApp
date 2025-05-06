@@ -23,12 +23,21 @@ const styles = {
     width: '36px',
     height: '36px',
     borderRadius: '50%',
-    background: `linear-gradient(to right, ${theme.colors.info.main}, ${theme.colors.secondary.light})`,
+    overflow: 'hidden',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    color: 'white',
-    fontWeight: theme.typography.fontWeight.bold
+    backgroundColor: `${theme.colors.info.light}20` // Fundo claro como fallback
+  },
+  userAvatarImage: {
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover'
+  },
+  userAvatarFallback: {
+    fontSize: theme.typography.fontSize.md,
+    fontWeight: theme.typography.fontWeight.bold,
+    color: theme.colors.info.main
   },
   userName: {
     fontSize: theme.typography.fontSize.md,
@@ -77,8 +86,12 @@ const UserMenu = () => {
   const { currentUser, isAdmin, logout } = useAuth();
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = React.useState(false);
+
+  // URLs de avatares padrão
+  const maleAvatarUrl = 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png';
+  const femaleAvatarUrl = 'https://cdn-icons-png.flaticon.com/512/3135/3135789.png';
   
-  // Função para obter as iniciais do usuário
+  // Função para obter as iniciais do usuário (como fallback)
   const getInitials = (name) => {
     if (!name) return 'U';
     return name
@@ -93,6 +106,15 @@ const UserMenu = () => {
     logout();
     navigate('/login');
   };
+
+  // Determinar a URL do avatar com base no gênero
+  const getAvatarUrl = () => {
+    if (currentUser?.avatarUrl) {
+      return currentUser.avatarUrl;
+    }
+    
+    return currentUser?.gender === 'female' ? femaleAvatarUrl : maleAvatarUrl;
+  };
   
   return (
     <div style={styles.userMenuContainer}>
@@ -101,7 +123,17 @@ const UserMenu = () => {
         onClick={() => setIsOpen(!isOpen)}
       >
         <div style={styles.userAvatar}>
-          {getInitials(currentUser?.name)}
+          {currentUser?.avatarUrl || currentUser?.gender ? (
+            <img 
+              src={getAvatarUrl()} 
+              alt={`Avatar de ${currentUser?.name || 'usuário'}`}
+              style={styles.userAvatarImage}
+            />
+          ) : (
+            <span style={styles.userAvatarFallback}>
+              {getInitials(currentUser?.name)}
+            </span>
+          )}
         </div>
         <div>
           <div style={styles.userName}>{currentUser?.name || 'Usuário'}</div>

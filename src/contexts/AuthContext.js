@@ -1,3 +1,4 @@
+// src/contexts/AuthContext.js
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import apiService from '../services/apiService';
 
@@ -45,6 +46,23 @@ export const AuthProvider = ({ children }) => {
     };
     
     checkAuth();
+    
+    // Ouvir eventos de atualização de perfil
+    const handleProfileUpdate = () => {
+      const savedUser = localStorage.getItem('user');
+      if (savedUser) {
+        const user = JSON.parse(savedUser);
+        setCurrentUser(user);
+        setIsAdmin(user.role === 'admin');
+      }
+    };
+    
+    window.addEventListener('userProfileUpdated', handleProfileUpdate);
+    
+    // Limpar listener quando componente for desmontado
+    return () => {
+      window.removeEventListener('userProfileUpdated', handleProfileUpdate);
+    };
   }, []);
 
   // Função de registro
@@ -85,12 +103,18 @@ export const AuthProvider = ({ children }) => {
     setIsAdmin(false);
   };
 
-  // Função para atualizar o perfil
+  // Função para atualizar o perfil (adicionada)
   const updateProfile = async (userData) => {
     try {
-      // Implementar quando tivermos o endpoint para isso
-      console.log('Atualização de perfil ainda não implementada');
-      return currentUser;
+      const updatedUser = await apiService.auth.updateUserProfile(userData);
+      
+      // Atualizar o estado do usuário atual
+      setCurrentUser(prevUser => ({
+        ...prevUser,
+        ...updatedUser
+      }));
+      
+      return updatedUser;
     } catch (error) {
       console.error('Erro ao atualizar perfil:', error);
       throw error;
