@@ -1,6 +1,5 @@
 # Pulse - Employee Feedback System
 
-![Pulse Logo](https://via.placeholder.com/150x50?text=Pulse)
 
 Pulse is a comprehensive employee feedback and organizational climate monitoring system that helps companies track team motivation, workload, and overall satisfaction through weekly assessments.
 
