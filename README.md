@@ -30,4 +30,4 @@ Pulse creates a continuous feedback loop between employees and management throug
 ## Get in Touch
 
 For questions, support, or more information about this project, please contact:
-[Your Contact Information]
+[geanfilho174@gmail.com]
