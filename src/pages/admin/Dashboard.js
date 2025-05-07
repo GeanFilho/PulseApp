@@ -293,6 +293,7 @@ const AdminDashboard = () => {
     content: {
       padding: isMobile ? '10px' : '20px',
       width: '100%',
+      maxWidth: '1300px', // Mesmo valor que o dashboard do funcionário
       margin: '0 auto'
     },
     header: {

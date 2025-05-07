@@ -7,7 +7,7 @@ import FeedbackHistory from '../../components/FeedbackHistory';
 import Navbar from '../../components/Navbar';
 import theme from '../../styles/theme';
 
-// Estilos atualizados para tela cheia e responsividade
+// Estilos atualizados com largura máxima e melhor centralização
 const styles = {
   container: {
     display: 'flex',
@@ -20,8 +20,8 @@ const styles = {
     flex: 1,
     padding: '20px',
     width: '100%',
-    maxWidth: '100%',
-    margin: '0 auto',
+    maxWidth: '1300px', // Definindo uma largura máxima maior
+    margin: '0 auto',  // Centralizando o conteúdo
     boxSizing: 'border-box'
   },
   header: {
@@ -29,11 +29,10 @@ const styles = {
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: '24px',
-    flexWrap: 'wrap',
     width: '100%'
   },
   pageTitle: {
-    fontSize: 'min(2.5rem, 8vw)',
+    fontSize: 'min(2.25rem, 8vw)',
     fontWeight: 'bold',
     color: theme.colors.text.primary,
     margin: '0 0 16px 0',
@@ -97,13 +96,27 @@ const styles = {
   // Estilos específicos para o formulário de feedback
   feedbackFormContainer: {
     width: '100%',
-    boxSizing: 'border-box'
+    boxSizing: 'border-box',
+    backgroundColor: theme.colors.background.paper,
+    borderRadius: '12px',
+    boxShadow: theme.shadows.sm,
+    overflow: 'hidden'
   },
   // Estilos específicos para o histórico de feedback
   feedbackHistoryContainer: {
     width: '100%',
     boxSizing: 'border-box',
-    marginTop: '40px'
+    marginTop: '30px'
+  },
+  // Card para envolver o conteúdo e dar mais estrutura visual
+  card: {
+    backgroundColor: theme.colors.background.paper,
+    borderRadius: '12px',
+    boxShadow: theme.shadows.sm,
+    padding: '24px',
+    marginBottom: '24px',
+    width: '100%',
+    boxSizing: 'border-box'
   }
 };
 
