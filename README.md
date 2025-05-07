@@ -1,70 +1,137 @@
-# Getting Started with Create React App
+# Pulse - Employee Feedback System
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+![Pulse Logo](https://via.placeholder.com/150x50?text=Pulse)
 
-## Available Scripts
+Pulse is a comprehensive employee feedback and organizational climate monitoring system that helps companies track team motivation, workload, and overall satisfaction through weekly assessments.
 
-In the project directory, you can run:
+## Features
 
-### `npm start`
+- **Weekly Employee Feedback**: Simple forms to collect employee sentiment
+- **Admin Analytics Dashboard**: Visualize team health metrics
+- **User Management**: Manage departments and users
+- **Data Export**: Generate reports in PDF or Excel format
+- **Responsive Design**: Works on mobile and desktop devices
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+## Tech Stack
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+- React 19
+- Chart.js for data visualization
+- PostgreSQL database
+- JWT authentication
+- jsPDF & XLSX for data export
 
-### `npm test`
+## Getting Started
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+These instructions will get you a copy of the project up and running on your local machine for development and testing purposes.
 
-### `npm run build`
+### Prerequisites
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+- Node.js (v18 or higher)
+- npm (v9 or higher)
+- PostgreSQL (if you want to run the full backend)
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+### Installation
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/yourusername/pulse-app.git
+   cd pulse-app
+   ```
 
-### `npm run eject`
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+3. Set up environment variables:
+   ```bash
+   cp .env.example .env
+   ```
+   Then edit the `.env` file with your configuration.
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+4. Run the mock API server:
+   ```bash
+   npm run mock-api
+   ```
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+5. In a new terminal, start the React development server:
+   ```bash
+   npm start
+   ```
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+6. The application will open in your browser at `http://localhost:3000`
 
-## Learn More
+### Database Setup
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+For running with a real PostgreSQL database:
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+1. Create a PostgreSQL database
+2. Run the migration scripts located in `migrations/` folder:
+   ```bash
+   psql -U your_username -d your_database_name -f migrations/001_create_initial_tables.sql
+   ```
 
-### Code Splitting
+## Running in Production
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+To build the application for production:
 
-### Analyzing the Bundle Size
+```bash
+npm run build
+```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+The build artifacts will be stored in the `build/` directory.
 
-### Making a Progressive Web App
+## Authentication
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+The system comes with default users:
 
-### Advanced Configuration
+- **Admin User**: 
+  - Email: admin@exemplo.com
+  - Password: senha123
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+- **Regular User**: 
+  - Email: usuario@exemplo.com 
+  - Password: senha123
 
-### Deployment
+## Folder Structure
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+```
+pulse-app/
+├── migrations/           # Database migration scripts
+├── mock-api/             # Mock API for development
+├── public/               # Static files
+├── src/
+│   ├── components/       # React components
+│   ├── contexts/         # React contexts (auth, etc.)
+│   ├── pages/            # Page components
+│   ├── services/         # API services
+│   └── styles/           # CSS and styling
+└── package.json
+```
 
-### `npm run build` fails to minify
+## Customization
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+### Departments
+
+Edit the departments list in:
+- `src/pages/admin/Settings.js` for admin settings
+- `src/pages/auth/Register.js` for registration options
+
+### Branding
+
+To customize the app name and branding:
+1. Change the company name in the admin settings
+2. Replace logo and colors in `src/styles/theme.js`
+
+## Contributing
+
+Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details
+
+## Acknowledgments
+
+* Create React App team for the development environment
+* All contributors and beta testers
