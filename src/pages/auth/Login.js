@@ -160,62 +160,6 @@ const styles = {
     borderRadius: '4px'
   },
   
-  flexBetween: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: '16px'
-  },
-  
-  checkboxContainer: {
-    display: 'flex',
-    alignItems: 'center'
-  },
-  
-  checkbox: {
-    marginRight: '8px'
-  },
-  
-  checkboxLabel: {
-    fontSize: '14px',
-    color: '#374151'
-  },
-  
-  forgotPassword: {
-    fontSize: '14px',
-    color: '#4f46e5',
-    textDecoration: 'none'
-  },
-  
-  demoSection: {
-    marginTop: '24px',
-    textAlign: 'center',
-    borderTop: '1px solid #e5e7eb',
-    paddingTop: '16px'
-  },
-  
-  demoText: {
-    fontSize: '12px',
-    color: '#6b7280',
-    marginBottom: '8px'
-  },
-  
-  demoButtons: {
-    display: 'flex',
-    gap: '8px',
-    justifyContent: 'center'
-  },
-  
-  demoButton: {
-    fontSize: '12px',
-    padding: '8px',
-    backgroundColor: '#f3f4f6',
-    border: '1px solid #d1d5db',
-    borderRadius: '8px',
-    cursor: 'pointer',
-    color: '#374151'
-  },
-  
   registerSection: {
     marginTop: '24px',
     textAlign: 'center',
@@ -245,7 +189,6 @@ const styles = {
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
@@ -301,17 +244,6 @@ const Login = () => {
       setLoading(false);
     }
   };
-  
-  // Para fins de demonstração
-  const handleDemoLogin = (role) => {
-    if (role === 'admin') {
-      setEmail('admin@teste.com');
-      setPassword('senha123');
-    } else {
-      setEmail('usuario@exemplo.com');
-      setPassword('senha123');
-    }
-  };
 
   // Conteúdo do formulário de login
   const loginForm = (
@@ -354,21 +286,6 @@ const Login = () => {
           />
         </div>
         
-        <div style={styles.flexBetween}>
-          <div style={styles.checkboxContainer}>
-            <input
-              type="checkbox"
-              id="remember"
-              style={styles.checkbox}
-              checked={rememberMe}
-              onChange={(e) => setRememberMe(e.target.checked)}
-            />
-            <label style={styles.checkboxLabel} htmlFor="remember">Lembrar-me</label>
-          </div>
-          
-          <a href="#" style={styles.forgotPassword}>Esqueceu a senha?</a>
-        </div>
-        
         <button
           type="submit"
           style={{
@@ -380,26 +297,6 @@ const Login = () => {
           {loading ? 'Processando...' : 'Entrar'}
         </button>
       </form>
-      
-      <div style={styles.demoSection}>
-        <p style={styles.demoText}>Demo (para fins de teste):</p>
-        <div style={styles.demoButtons}>
-          <button
-            style={styles.demoButton}
-            onClick={() => handleDemoLogin('admin')}
-            type="button"
-          >
-            Login como Admin
-          </button>
-          <button
-            style={styles.demoButton}
-            onClick={() => handleDemoLogin('employee')}
-            type="button"
-          >
-            Login como Funcionário
-          </button>
-        </div>
-      </div>
       
       <div style={styles.registerSection}>
         <p style={styles.registerText}>

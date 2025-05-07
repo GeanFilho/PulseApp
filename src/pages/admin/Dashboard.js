@@ -173,45 +173,49 @@ const AdminDashboard = () => {
     }
   };
 
-  // Função para buscar os dados do backend
-  const fetchDashboardData = async () => {
-    try {
-      setLoading(true);
-      
-      // Buscar estatísticas e feedbacks usando o feedbackService
-      const stats = await feedbackService.getDashboardStats(period);
-      const recentFeedbacks = await feedbackService.getRecentFeedbacks(5);
-      
-      // Calcular a taxa de produtividade (média dos valores 'performance')
-      const productivityValues = recentFeedbacks
-        .map(feedback => feedback.performance || 0)
-        .filter(value => value > 0);
-      
-      const averageProductivity = productivityValues.length > 0
-        ? productivityValues.reduce((sum, value) => sum + value, 0) / productivityValues.length
-        : 0;
-      
-      // Atualizar o estado com os dados
-      setDashboardData({
-        stats: {
-          ...stats,
-          productivityRate: 50,
-          responseRate: 100
-        },
-        recentFeedbacks
-      });
-      
-      // Também buscar a contagem de usuários
-      await fetchUserCount();
-      
-      setLoading(false);
-    } catch (err) {
-      console.error('Erro ao buscar dados do dashboard:', err);
-      setError('Ocorreu um erro ao carregar os dados. Por favor, tente novamente.');
-      setLoading(false);
-    }
-  };
-
+  // Função para buscar os dados do backend - CORRIGIDA PARA MOSTRAR TODOS OS FEEDBACKS
+// Função fetchDashboardData corrigida - utiliza o endpoint que está funcionando
+// Função fetchDashboardData atualizada com limite muito alto
+const fetchDashboardData = async () => {
+  try {
+    setLoading(true);
+    
+    // Buscar estatísticas
+    const stats = await feedbackService.getDashboardStats(period);
+    
+    // CORREÇÃO: Usar o endpoint que funciona com um número MUITO alto
+    // 1.000.000 de feedbacks deve ser suficiente para praticamente qualquer sistema
+    const allFeedbacks = await feedbackService.getRecentFeedbacks(1000000);
+    
+    // Calcular a taxa de produtividade
+    const productivityValues = allFeedbacks
+      .map(feedback => feedback.performance || 0)
+      .filter(value => value > 0);
+    
+    const averageProductivity = productivityValues.length > 0
+      ? productivityValues.reduce((sum, value) => sum + value, 0) / productivityValues.length
+      : 0;
+    
+    // Atualizar o estado com todos os feedbacks obtidos
+    setDashboardData({
+      stats: {
+        ...stats,
+        productivityRate: Math.round(averageProductivity * 10),
+        responseRate: stats.responseRate || 100
+      },
+      recentFeedbacks: allFeedbacks
+    });
+    
+    // Também buscar a contagem de usuários
+    await fetchUserCount();
+    
+    setLoading(false);
+  } catch (err) {
+    console.error('Erro ao buscar dados do dashboard:', err);
+    setError('Ocorreu um erro ao carregar os dados. Por favor, tente novamente.');
+    setLoading(false);
+  }
+};
   // Abrir o modal de confirmação para excluir feedback
   const confirmDeleteFeedback = (feedback) => {
     setFeedbackToDelete(feedback);
@@ -623,6 +627,32 @@ const AdminDashboard = () => {
       border: 'none',
       color: 'white',
       cursor: 'pointer'
+    },
+    // Adicionando paginação
+    paginationContainer: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginTop: '20px',
+      padding: '10px',
+      width: '100%'
+    },
+    paginationButton: {
+      padding: '8px 12px',
+      border: '1px solid #d1d5db',
+      borderRadius: '8px',
+      backgroundColor: 'white',
+      color: '#4b5563',
+      cursor: 'pointer'
+    },
+    paginationButtonActive: {
+      backgroundColor: '#4f46e5',
+      color: 'white',
+      border: '1px solid #4f46e5'
+    },
+    paginationInfo: {
+      fontSize: '14px',
+      color: '#6b7280'
     }
   };
 
@@ -660,6 +690,80 @@ const AdminDashboard = () => {
               {deleteLoading ? 'Processando...' : 'Ocultar Feedback'}
             </button>
           </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Adicionando paginação para lidar com muitos feedbacks
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  // Calcular os índices dos itens a serem exibidos na página atual
+  const indexOfLastFeedback = currentPage * itemsPerPage;
+  const indexOfFirstFeedback = indexOfLastFeedback - itemsPerPage;
+  const currentFeedbacks = visibleFeedbacks.slice(indexOfFirstFeedback, indexOfLastFeedback);
+  const totalPages = Math.ceil(visibleFeedbacks.length / itemsPerPage);
+
+  // Funções para navegar entre as páginas
+  const goToNextPage = () => {
+    setCurrentPage(page => Math.min(page + 1, totalPages));
+  };
+
+  const goToPreviousPage = () => {
+    setCurrentPage(page => Math.max(page - 1, 1));
+  };
+
+  // Componente de paginação
+  const Pagination = () => {
+    if (totalPages <= 1) return null;
+
+    return (
+      <div style={styles.paginationContainer}>
+        <div style={styles.paginationInfo}>
+          Mostrando {indexOfFirstFeedback + 1} a {Math.min(indexOfLastFeedback, visibleFeedbacks.length)} de {visibleFeedbacks.length} feedbacks
+        </div>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button 
+            style={styles.paginationButton} 
+            onClick={goToPreviousPage}
+            disabled={currentPage === 1}
+          >
+            Anterior
+          </button>
+          {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+            // Lógica para mostrar páginas em torno da página atual
+            let pageNum = i + 1;
+            if (totalPages > 5) {
+              if (currentPage <= 3) {
+                pageNum = i + 1;
+              } else if (currentPage >= totalPages - 2) {
+                pageNum = totalPages - 4 + i;
+              } else {
+                pageNum = currentPage - 2 + i;
+              }
+            }
+            
+            return (
+              <button
+                key={pageNum}
+                style={{
+                  ...styles.paginationButton,
+                  ...(currentPage === pageNum ? styles.paginationButtonActive : {})
+                }}
+                onClick={() => setCurrentPage(pageNum)}
+              >
+                {pageNum}
+              </button>
+            );
+          })}
+          <button 
+            style={styles.paginationButton}
+            onClick={goToNextPage}
+            disabled={currentPage === totalPages}
+          >
+            Próxima
+          </button>
         </div>
       </div>
     );
@@ -736,7 +840,7 @@ const AdminDashboard = () => {
             </div>
           </div>
           
-          {/* Card 3: Taxa de Resposta (substituindo Tendência de Motivação) */}
+          {/* Card 3: Taxa de Resposta */}
           <div style={styles.statCard(2)}>
             <h3 style={styles.statTitle}>Taxa de Resposta</h3>
             <p style={styles.statValue}>{dashboardData.stats.responseRate}%</p>
@@ -750,7 +854,10 @@ const AdminDashboard = () => {
         {/* Feedback recentes */}
         <div style={styles.feedbacksSection}>
           <div style={styles.feedbacksHeader}>
-            <h3 style={styles.feedbacksTitle}>Feedbacks Recentes</h3>
+            <h3 style={styles.feedbacksTitle}>Todos os Feedbacks</h3>
+            <div style={{fontSize: '14px', color: '#6b7280'}}>
+              Total: {visibleFeedbacks.length} feedbacks
+            </div>
           </div>
           
           {visibleFeedbacks.length === 0 ? (
@@ -759,7 +866,7 @@ const AdminDashboard = () => {
             </div>
           ) : (
             <div style={styles.feedbacksList}>
-              {visibleFeedbacks.map((feedback) => (
+              {currentFeedbacks.map((feedback) => (
                 <div key={feedback.id} style={styles.feedbackItem}>
                   <div style={styles.feedbackHeader}>
                     <span style={styles.feedbackAuthor}>{feedback.name}</span>
@@ -786,6 +893,9 @@ const AdminDashboard = () => {
               ))}
             </div>
           )}
+          
+          {/* Adiciona a paginação abaixo da lista de feedbacks */}
+          <Pagination />
         </div>
       </div>
     );
